@@ -98,18 +98,40 @@ const LS = { favorites:"campus_xianyu_favs", messages:"campus_xianyu_msgs", user
 const load = (k,f)=>{ try{ const v = JSON.parse(localStorage.getItem(k)); return v ?? f; }catch{ return f; } };
 const save = (k,v)=> localStorage.setItem(k, JSON.stringify(v));
 
+// 获取存储的Token
+const getToken = () => localStorage.getItem('auth_token');
+
+// 设置Token
+const setToken = (token) => localStorage.setItem('auth_token', token);
+
+// 清除Token
+const clearToken = () => localStorage.removeItem('auth_token');
+
 // API调用函数
 const apiCall = async (url, options = {}) => {
   try {
+    const token = getToken();
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers
+    };
+    
+    // 如果有token，添加到请求头
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const response = await fetch(`${API_BASE_URL}${url}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-      },
+      headers,
       ...options
     });
     
     if (!response.ok) {
+      // 如果是401错误，清除token并重定向到登录
+      if (response.status === 401) {
+        clearToken();
+        window.location.reload();
+      }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
@@ -118,6 +140,76 @@ const apiCall = async (url, options = {}) => {
   } catch (error) {
     console.error('API调用错误:', error);
     throw error;
+  }
+};
+
+// 认证相关API
+const authAPI = {
+  // 用户注册
+  register: async (userData) => {
+    return await apiCall('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(userData)
+    });
+  },
+  
+  // 用户登录
+  login: async (credentials) => {
+    return await apiCall('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials)
+    });
+  },
+  
+  // 获取当前用户信息
+  getMe: async () => {
+    return await apiCall('/auth/me');
+  },
+  
+  // 更新用户资料
+  updateProfile: async (profileData) => {
+    return await apiCall('/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData)
+    });
+  },
+  
+  // 修改密码
+  changePassword: async (passwordData) => {
+    return await apiCall('/auth/password', {
+      method: 'PUT',
+      body: JSON.stringify(passwordData)
+    });
+  },
+  
+  // 用户登出
+  logout: async () => {
+    return await apiCall('/auth/logout', {
+      method: 'POST'
+    });
+  },
+  
+  // 重新发送验证邮件
+  resendVerification: async () => {
+    return await apiCall('/auth/resend-verification', {
+      method: 'POST'
+    });
+  },
+  
+  // 请求密码重置
+  forgotPassword: async (email) => {
+    return await apiCall('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    });
+  },
+  
+  // 重置密码
+  resetPassword: async (token, newPassword) => {
+    return await apiCall('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword })
+    });
   }
 };
 
@@ -173,7 +265,8 @@ const listingsAPI = {
   }
 };
 function App(){
-  const [user, setUser] = useState(()=> load(LS.user, { id:"me", name:"Me", avatar:"https://i.pravatar.cc/100?img=15" }));
+  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [listings, setListings] = useState([]);
   const [favorites, setFavorites] = useState(()=> load(LS.favorites, {}));
   const [messages, setMessages] = useState(()=> load(LS.messages, {}));
@@ -182,11 +275,129 @@ function App(){
   const [posting,setPosting] = useState(false); const [chatFor,setChatFor] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showLogin, setShowLogin] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
+  const [showVerification, setShowVerification] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   
   // 保存用户偏好到localStorage
   useEffect(()=>save(LS.favorites, favorites),[favorites]);
   useEffect(()=>save(LS.messages, messages),[messages]);
   useEffect(()=>save(LS.user, user),[user]);
+  
+  // 检查用户认证状态
+  const checkAuth = useCallback(async () => {
+    const token = getToken();
+    if (token) {
+      try {
+        const response = await authAPI.getMe();
+        if (response.success) {
+          setUser(response.data);
+          setIsAuthenticated(true);
+        } else {
+          clearToken();
+        }
+      } catch (error) {
+        console.error('认证检查失败:', error);
+        clearToken();
+      }
+    }
+  }, []);
+  
+  // 用户登录
+  const handleLogin = async (credentials) => {
+    try {
+      const response = await authAPI.login(credentials);
+      if (response.success) {
+        setToken(response.data.token);
+        setUser(response.data.user);
+        setIsAuthenticated(true);
+        setShowLogin(false);
+        setError(null);
+      } else {
+        setError(response.message || '登录失败');
+      }
+    } catch (error) {
+      console.error('登录失败:', error);
+      setError('登录失败，请重试');
+    }
+  };
+  
+  // 用户注册
+  const handleRegister = async (userData) => {
+    try {
+      const response = await authAPI.register(userData);
+      if (response.success) {
+        setToken(response.data.token);
+        setUser(response.data.user);
+        setIsAuthenticated(true);
+        setShowRegister(false);
+        setError(null);
+        
+        // 如果邮箱验证邮件发送成功，显示验证提示
+        if (response.data.emailSent) {
+          setShowVerification(true);
+        }
+      } else {
+        setError(response.message || '注册失败');
+      }
+    } catch (error) {
+      console.error('注册失败:', error);
+      setError('注册失败，请重试');
+    }
+  };
+  
+  // 用户登出
+  const handleLogout = async () => {
+    try {
+      await authAPI.logout();
+    } catch (error) {
+      console.error('登出失败:', error);
+    } finally {
+      clearToken();
+      setUser(null);
+      setIsAuthenticated(false);
+      setError(null);
+    }
+  };
+  
+  // 重新发送验证邮件
+  const handleResendVerification = async () => {
+    try {
+      const response = await authAPI.resendVerification();
+      if (response.success) {
+        setError(null);
+        alert('验证邮件已重新发送，请查收您的邮箱');
+      } else {
+        setError(response.message || '重新发送失败');
+      }
+    } catch (error) {
+      console.error('重新发送验证邮件失败:', error);
+      setError('重新发送失败，请重试');
+    }
+  };
+  
+  // 请求密码重置
+  const handleForgotPassword = async (email) => {
+    try {
+      const response = await authAPI.forgotPassword(email);
+      if (response.success) {
+        setError(null);
+        alert('密码重置邮件已发送，请查收您的邮箱');
+        setShowForgotPassword(false);
+      } else {
+        setError(response.message || '发送失败');
+      }
+    } catch (error) {
+      console.error('请求密码重置失败:', error);
+      setError('发送失败，请重试');
+    }
+  };
+  
+  // 初始检查认证状态
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
   
   // 从API加载商品数据
   const loadListings = useCallback(async (params = {}) => {
@@ -238,6 +449,8 @@ function App(){
 
   // 加载用户商品
   const loadUserListings = useCallback(async () => {
+    if (!user?.id) return;
+    
     setLoading(true);
     setError(null);
     try {
@@ -253,7 +466,7 @@ function App(){
     } finally {
       setLoading(false);
     }
-  }, [user.id]);
+  }, [user?.id]);
 
   // 当筛选条件改变时重新加载数据
   useEffect(() => {
@@ -286,6 +499,11 @@ function App(){
   const toggleFav = (id)=> setFavorites(f=>({ ...f, [id]: !f[id] }));
   
   const handlePost = async (item) => {
+    if (!user?.id) {
+      setError('请先登录');
+      return;
+    }
+    
     try {
       const newItem = {
         ...item,
@@ -350,6 +568,10 @@ function App(){
   };
   const sendMsg = (listingId,text)=>{
     if(!text.trim()) return;
+    if (!user?.id) {
+      setError('请先登录');
+      return;
+    }
     setMessages(m=>{ 
       const arr = m[listingId]?[...m[listingId]]:[]; 
       arr.push({ id: uid(), from: user.id, text, at: now() });
@@ -383,9 +605,9 @@ function App(){
           <span>{item.condition} · {timeAgo(item.createdAt)}</span>
           <div className="actions">
             <button onClick={()=>setChatFor(item)}>Chat</button>
-            {item.seller?.id===user.id && !item.sold && <button onClick={()=>markSold(item._id || item.id,true)}>Mark Sold</button>}
-            {item.seller?.id===user.id && item.sold && <button onClick={()=>markSold(item._id || item.id,false)}>Unmark Sold</button>}
-            {item.seller?.id===user.id && <button onClick={()=>removeItem(item._id || item.id)}>Delete</button>}
+            {item.seller?.id===user?.id && !item.sold && <button onClick={()=>markSold(item._id || item.id,true)}>Mark Sold</button>}
+            {item.seller?.id===user?.id && item.sold && <button onClick={()=>markSold(item._id || item.id,false)}>Unmark Sold</button>}
+            {item.seller?.id===user?.id && <button onClick={()=>removeItem(item._id || item.id)}>Delete</button>}
           </div>
         </div>
       </div>
@@ -398,9 +620,29 @@ function App(){
         <div className="search"><input placeholder="Search: title/description..." value={q} onChange={e=>setQ(e.target.value)} /></div>
         <div className="tabs">
           <button className={tab==='explore'?'on':''} onClick={()=>setTab('explore')}>Explore</button>
-          <button className={tab==='favorites'?'on':''} onClick={()=>setTab('favorites')}>Favorites</button>
-          <button className={tab==='mine'?'on':''} onClick={()=>setTab('mine')}>My Items</button>
-          <button className="primary" onClick={()=>setPosting(true)}>＋ Post</button>
+          {isAuthenticated && (
+            <>
+              <button className={tab==='favorites'?'on':''} onClick={()=>setTab('favorites')}>Favorites</button>
+              <button className={tab==='mine'?'on':''} onClick={()=>setTab('mine')}>My Items</button>
+              <button className="primary" onClick={()=>{if(user?.id) setPosting(true); else setError('请先登录');}}>＋ Post</button>
+            </>
+          )}
+          {!isAuthenticated ? (
+            <>
+              <button onClick={()=>setShowLogin(true)}>Login</button>
+              <button className="primary" onClick={()=>setShowRegister(true)}>Register</button>
+            </>
+          ) : (
+            <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+              <span style={{fontSize: '14px'}}>Hi, {user?.name}</span>
+              {!user?.isVerified && (
+                <button onClick={handleResendVerification} style={{fontSize: '12px', padding: '4px 8px'}}>
+                  验证邮箱
+                </button>
+              )}
+              <button onClick={handleLogout}>Logout</button>
+            </div>
+          )}
         </div>
       </div>
       {error && (
@@ -435,6 +677,10 @@ function App(){
       </div>
       {posting && <PostModal onClose={()=>setPosting(false)} onPost={(item)=>{ handlePost(item); }}/>} 
       {chatFor && <ChatDrawer item={chatFor} onClose={()=>setChatFor(null)} messages={messages[chatFor._id || chatFor.id]||[]} onSend={(id,text)=>sendMsg(id,text)} user={user} />}
+      {showLogin && <LoginModal onClose={()=>setShowLogin(false)} onLogin={handleLogin} onSwitchToRegister={()=>{setShowLogin(false); setShowRegister(true);}} onForgotPassword={()=>{setShowLogin(false); setShowForgotPassword(true);}} />}
+      {showRegister && <RegisterModal onClose={()=>setShowRegister(false)} onRegister={handleRegister} onSwitchToLogin={()=>{setShowRegister(false); setShowLogin(true);}} />}
+      {showVerification && <VerificationModal onClose={()=>setShowVerification(false)} user={user} onResend={handleResendVerification} />}
+      {showForgotPassword && <ForgotPasswordModal onClose={()=>setShowForgotPassword(false)} onSubmit={handleForgotPassword} onSwitchToLogin={()=>{setShowForgotPassword(false); setShowLogin(true);}} />}
     </>
   );
 }
@@ -496,7 +742,7 @@ function ChatDrawer({ item, onClose, messages, onSend, user }){
         <div className="panel-top"><button onClick={onClose}>×</button><div>{item.seller?.name} · {item.title}</div></div>
         <div className="chat">
           {(messages||[]).map(m=>(
-            <div key={m.id} className={"line "+(m.from===user.id?"me":"other")}>
+            <div key={m.id} className={"line "+(m.from===user?.id?"me":"other")}>
               <div className="bubble">{m.text}<div className="ts">{timeAgo(m.at)}</div></div>
             </div>
           ))}
@@ -510,6 +756,297 @@ function ChatDrawer({ item, onClose, messages, onSend, user }){
     </div>
   );
 }
+// 登录模态框组件
+function LoginModal({ onClose, onLogin, onSwitchToRegister, onForgotPassword }) {
+  const { useState } = React;
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!email || !password) return alert("请填写邮箱和密码");
+    
+    setLoading(true);
+    try {
+      await onLogin({ email, password });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal">
+      <div className="panel">
+        <div className="panel-top">
+          <div className="panel-title">登录</div>
+          <button onClick={onClose}>×</button>
+        </div>
+        <div className="panel-body">
+          <form onSubmit={handleSubmit} className="form">
+            <div className="field">
+              <label>邮箱</label>
+              <input 
+                type="email" 
+                value={email} 
+                onChange={e => setEmail(e.target.value)} 
+                placeholder="请输入邮箱地址"
+                required
+              />
+            </div>
+            <div className="field">
+              <label>密码</label>
+              <input 
+                type="password" 
+                value={password} 
+                onChange={e => setPassword(e.target.value)} 
+                placeholder="请输入密码"
+                required
+              />
+            </div>
+            <div className="panel-bottom">
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%'}}>
+                <button type="button" onClick={onSwitchToRegister}>注册新账号</button>
+                <button type="button" onClick={onForgotPassword} style={{fontSize: '12px', color: '#666'}}>忘记密码？</button>
+              </div>
+              <button type="submit" className="primary" disabled={loading}>
+                {loading ? "登录中..." : "登录"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 注册模态框组件
+function RegisterModal({ onClose, onRegister, onSwitchToLogin }) {
+  const { useState } = React;
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+    name: "",
+    phone: ""
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.email || !formData.password || !formData.name) {
+      return alert("请填写必填字段");
+    }
+    
+    if (formData.password !== formData.confirmPassword) {
+      return alert("两次输入的密码不一致");
+    }
+    
+    if (formData.password.length < 6) {
+      return alert("密码至少6个字符");
+    }
+    
+    setLoading(true);
+    try {
+      const { confirmPassword, ...userData } = formData;
+      // 过滤掉空的手机号
+      if (!userData.phone || userData.phone.trim() === '') {
+        delete userData.phone;
+      }
+      await onRegister(userData);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal">
+      <div className="panel">
+        <div className="panel-top">
+          <div className="panel-title">注册</div>
+          <button onClick={onClose}>×</button>
+        </div>
+        <div className="panel-body">
+          <form onSubmit={handleSubmit} className="form">
+            <div className="field">
+              <label>邮箱 *</label>
+              <input 
+                type="email" 
+                value={formData.email} 
+                onChange={e => handleChange('email', e.target.value)} 
+                placeholder="请输入邮箱地址"
+                required
+              />
+            </div>
+            <div className="field">
+              <label>用户名 *</label>
+              <input 
+                type="text" 
+                value={formData.name} 
+                onChange={e => handleChange('name', e.target.value)} 
+                placeholder="请输入用户名"
+                required
+              />
+            </div>
+            <div className="field">
+              <label>手机号</label>
+              <input 
+                type="tel" 
+                value={formData.phone} 
+                onChange={e => handleChange('phone', e.target.value)} 
+                placeholder="请输入手机号（可选）"
+              />
+            </div>
+            <div className="field">
+              <label>密码 *</label>
+              <input 
+                type="password" 
+                value={formData.password} 
+                onChange={e => handleChange('password', e.target.value)} 
+                placeholder="请输入密码（至少6个字符）"
+                required
+              />
+            </div>
+            <div className="field">
+              <label>确认密码 *</label>
+              <input 
+                type="password" 
+                value={formData.confirmPassword} 
+                onChange={e => handleChange('confirmPassword', e.target.value)} 
+                placeholder="请再次输入密码"
+                required
+              />
+            </div>
+            <div className="panel-bottom">
+              <button type="button" onClick={onSwitchToLogin}>已有账号？登录</button>
+              <button type="submit" className="primary" disabled={loading}>
+                {loading ? "注册中..." : "注册"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 邮箱验证模态框组件
+function VerificationModal({ onClose, user, onResend }) {
+  const { useState } = React;
+  const [loading, setLoading] = useState(false);
+
+  const handleResend = async () => {
+    setLoading(true);
+    try {
+      await onResend();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal">
+      <div className="panel">
+        <div className="panel-top">
+          <div className="panel-title">📧 邮箱验证</div>
+          <button onClick={onClose}>×</button>
+        </div>
+        <div className="panel-body">
+          <div style={{textAlign: 'center', padding: '20px'}}>
+            <div style={{fontSize: '48px', marginBottom: '20px'}}>📬</div>
+            <h3 style={{color: '#333', marginBottom: '15px'}}>验证邮件已发送</h3>
+            <p style={{color: '#666', lineHeight: '1.6', marginBottom: '20px'}}>
+              我们已向 <strong>{user?.email}</strong> 发送了一封验证邮件。
+              <br/>请查收您的邮箱并点击验证链接完成注册。
+            </p>
+            
+            <div style={{background: '#e3f2fd', border: '1px solid #bbdefb', borderRadius: '5px', padding: '15px', margin: '20px 0'}}>
+              <p style={{margin: '0', color: '#1976d2', fontSize: '14px'}}>
+                <strong>💡 提示：</strong><br/>
+                • 验证链接24小时内有效<br/>
+                • 如果没有收到邮件，请检查垃圾邮件文件夹<br/>
+                • 验证后即可正常使用平台所有功能
+              </p>
+            </div>
+            
+            <div style={{display: 'flex', gap: '10px', justifyContent: 'center'}}>
+              <button onClick={handleResend} disabled={loading} style={{fontSize: '14px'}}>
+                {loading ? "发送中..." : "重新发送"}
+              </button>
+              <button onClick={onClose} className="primary">
+                我知道了
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 忘记密码模态框组件
+function ForgotPasswordModal({ onClose, onSubmit, onSwitchToLogin }) {
+  const { useState } = React;
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!email) return alert("请输入邮箱地址");
+    
+    setLoading(true);
+    try {
+      await onSubmit(email);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal">
+      <div className="panel">
+        <div className="panel-top">
+          <div className="panel-title">🔑 忘记密码</div>
+          <button onClick={onClose}>×</button>
+        </div>
+        <div className="panel-body">
+          <form onSubmit={handleSubmit} className="form">
+            <div style={{textAlign: 'center', marginBottom: '20px'}}>
+              <div style={{fontSize: '48px', marginBottom: '15px'}}>🔒</div>
+              <p style={{color: '#666', lineHeight: '1.6'}}>
+                输入您的邮箱地址，我们将发送密码重置链接给您。
+              </p>
+            </div>
+            
+            <div className="field">
+              <label>邮箱地址</label>
+              <input 
+                type="email" 
+                value={email} 
+                onChange={e => setEmail(e.target.value)} 
+                placeholder="请输入注册时使用的邮箱"
+                required
+              />
+            </div>
+            
+            <div className="panel-bottom">
+              <button type="button" onClick={onSwitchToLogin}>返回登录</button>
+              <button type="submit" className="primary" disabled={loading}>
+                {loading ? "发送中..." : "发送重置链接"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
 
   </script>

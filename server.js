@@ -8,6 +8,7 @@ const connectDB = require('./config/database');
 
 // 导入路由
 const listingRoutes = require('./routes/listings');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -45,6 +46,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static('uploads'));
 
 // API路由
+app.use('/api/auth', authRoutes);
 app.use('/api/listings', listingRoutes);
 
 // 健康检查端点

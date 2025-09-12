@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>认证系统测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .loading { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        input { padding: 8px; margin: 5px; width: 200px; }
+        .form-group { margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>校园二手交易平台 - 认证系统测试</h1>
+    
+    <div class="test-section" id="register-test">
+        <h3>1. 用户注册测试</h3>
+        <div class="form-group">
+            <input type="email" id="reg-email" placeholder="邮箱" value="test@example.com">
+            <input type="text" id="reg-name" placeholder="用户名" value="测试用户">
+            <input type="tel" id="reg-phone" placeholder="手机号" value="1234567890">
+            <input type="password" id="reg-password" placeholder="密码" value="password123">
+        </div>
+        <button onclick="testRegister()">测试注册</button>
+        <div id="register-result"></div>
+    </div>
+    
+    <div class="test-section" id="login-test">
+        <h3>2. 用户登录测试</h3>
+        <div class="form-group">
+            <input type="email" id="login-email" placeholder="邮箱" value="test@example.com">
+            <input type="password" id="login-password" placeholder="密码" value="password123">
+        </div>
+        <button onclick="testLogin()">测试登录</button>
+        <div id="login-result"></div>
+    </div>
+    
+    <div class="test-section" id="profile-test">
+        <h3>3. 获取用户信息测试</h3>
+        <button onclick="testGetProfile()">获取当前用户信息</button>
+        <div id="profile-result"></div>
+    </div>
+    
+    <div class="test-section" id="logout-test">
+        <h3>4. 用户登出测试</h3>
+        <button onclick="testLogout()">测试登出</button>
+        <div id="logout-result"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3001/api';
+        let authToken = null;
+        
+        async function apiCall(url, options = {}) {
+            try {
+                const headers = {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                };
+                
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+                
+                const response = await fetch(`${API_BASE_URL}${url}`, {
+                    headers,
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('API调用错误:', error);
+                throw error;
+            }
+        }
+        
+        async function testRegister() {
+            const resultDiv = document.getElementById('register-result');
+            resultDiv.innerHTML = '<p>注册中...</p>';
+            resultDiv.className = 'test-section loading';
+            
+            const userData = {
+                email: document.getElementById('reg-email').value,
+                name: document.getElementById('reg-name').value,
+                phone: document.getElementById('reg-phone').value,
+                password: document.getElementById('reg-password').value
+            };
+            
+            try {
+                const response = await apiCall('/auth/register', {
+                    method: 'POST',
+                    body: JSON.stringify(userData)
+                });
+                
+                if (response.success) {
+                    authToken = response.data.token;
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ 注册成功！</p>
+                        <p>Token: ${authToken.substring(0, 20)}...</p>
+                        <pre>${JSON.stringify(response, null, 2)}</pre>
+                    `;
+                    resultDiv.className = 'test-section success';
+                } else {
+                    resultDiv.innerHTML = `
+                        <p class="error">❌ 注册失败</p>
+                        <p>${response.message}</p>
+                    `;
+                    resultDiv.className = 'test-section error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ 注册失败</p>
+                    <p>错误: ${error.message}</p>
+                `;
+                resultDiv.className = 'test-section error';
+            }
+        }
+        
+        async function testLogin() {
+            const resultDiv = document.getElementById('login-result');
+            resultDiv.innerHTML = '<p>登录中...</p>';
+            resultDiv.className = 'test-section loading';
+            
+            const credentials = {
+                email: document.getElementById('login-email').value,
+                password: document.getElementById('login-password').value
+            };
+            
+            try {
+                const response = await apiCall('/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify(credentials)
+                });
+                
+                if (response.success) {
+                    authToken = response.data.token;
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ 登录成功！</p>
+                        <p>Token: ${authToken.substring(0, 20)}...</p>
+                        <pre>${JSON.stringify(response, null, 2)}</pre>
+                    `;
+                    resultDiv.className = 'test-section success';
+                } else {
+                    resultDiv.innerHTML = `
+                        <p class="error">❌ 登录失败</p>
+                        <p>${response.message}</p>
+                    `;
+                    resultDiv.className = 'test-section error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ 登录失败</p>
+                    <p>错误: ${error.message}</p>
+                `;
+                resultDiv.className = 'test-section error';
+            }
+        }
+        
+        async function testGetProfile() {
+            const resultDiv = document.getElementById('profile-result');
+            resultDiv.innerHTML = '<p>获取用户信息中...</p>';
+            resultDiv.className = 'test-section loading';
+            
+            if (!authToken) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ 请先登录</p>
+                `;
+                resultDiv.className = 'test-section error';
+                return;
+            }
+            
+            try {
+                const response = await apiCall('/auth/me');
+                
+                if (response.success) {
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ 获取用户信息成功！</p>
+                        <pre>${JSON.stringify(response, null, 2)}</pre>
+                    `;
+                    resultDiv.className = 'test-section success';
+                } else {
+                    resultDiv.innerHTML = `
+                        <p class="error">❌ 获取用户信息失败</p>
+                        <p>${response.message}</p>
+                    `;
+                    resultDiv.className = 'test-section error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ 获取用户信息失败</p>
+                    <p>错误: ${error.message}</p>
+                `;
+                resultDiv.className = 'test-section error';
+            }
+        }
+        
+        async function testLogout() {
+            const resultDiv = document.getElementById('logout-result');
+            resultDiv.innerHTML = '<p>登出中...</p>';
+            resultDiv.className = 'test-section loading';
+            
+            if (!authToken) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ 请先登录</p>
+                `;
+                resultDiv.className = 'test-section error';
+                return;
+            }
+            
+            try {
+                const response = await apiCall('/auth/logout', {
+                    method: 'POST'
+                });
+                
+                if (response.success) {
+                    authToken = null;
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ 登出成功！</p>
+                        <pre>${JSON.stringify(response, null, 2)}</pre>
+                    `;
+                    resultDiv.className = 'test-section success';
+                } else {
+                    resultDiv.innerHTML = `
+                        <p class="error">❌ 登出失败</p>
+                        <p>${response.message}</p>
+                    `;
+                    resultDiv.className = 'test-section error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ 登出失败</p>
+                    <p>错误: ${error.message}</p>
+                `;
+                resultDiv.className = 'test-section error';
+            }
+        }
+    </script>
+</body>
+</html>

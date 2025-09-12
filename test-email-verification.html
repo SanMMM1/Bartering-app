@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>邮箱验证功能测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .loading { background-color: #fff3cd; border-color: #ffeaa7; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; border: none; border-radius: 5px; }
+        .primary { background: #007bff; color: white; }
+        .success-btn { background: #28a745; color: white; }
+        .warning-btn { background: #ffc107; color: black; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; font-size: 12px; }
+        input { padding: 8px; margin: 5px; width: 200px; border: 1px solid #ddd; border-radius: 3px; }
+        .form-group { margin: 10px 0; }
+        .step { margin: 15px 0; padding: 10px; background: #f8f9fa; border-left: 4px solid #007bff; }
+        .warning { background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 15px 0; }
+        .success-box { background: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; padding: 15px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📧 校园二手交易平台 - 邮箱验证功能测试</h1>
+        
+        <div class="warning">
+            <h3>⚠️ 重要提示</h3>
+            <p>在测试邮箱验证功能之前，请确保：</p>
+            <ol>
+                <li>已配置邮件服务（创建 .env 文件）</li>
+                <li>邮件服务器正常运行</li>
+                <li>使用真实的邮箱地址进行测试</li>
+            </ol>
+        </div>
+
+        <div class="test-section info">
+            <h3>📋 测试步骤说明</h3>
+            <div class="step">
+                <strong>步骤1：</strong> 注册新用户（会自动发送验证邮件）
+            </div>
+            <div class="step">
+                <strong>步骤2：</strong> 检查邮箱并点击验证链接
+            </div>
+            <div class="step">
+                <strong>步骤3：</strong> 测试重新发送验证邮件功能
+            </div>
+            <div class="step">
+                <strong>步骤4：</strong> 测试忘记密码功能
+            </div>
+        </div>
+        
+        <div class="test-section" id="register-test">
+            <h3>1. 用户注册测试（发送验证邮件）</h3>
+            <div class="form-group">
+                <input type="email" id="reg-email" placeholder="邮箱" value="test@example.com">
+                <input type="text" id="reg-name" placeholder="用户名" value="测试用户">
+                <input type="tel" id="reg-phone" placeholder="手机号" value="1234567890">
+                <input type="password" id="reg-password" placeholder="密码" value="password123">
+            </div>
+            <button onclick="testRegister()" class="primary">测试注册</button>
+            <div id="register-result"></div>
+        </div>
+        
+        <div class="test-section" id="resend-test">
+            <h3>2. 重新发送验证邮件测试</h3>
+            <button onclick="testResendVerification()" class="warning-btn">重新发送验证邮件</button>
+            <div id="resend-result"></div>
+        </div>
+        
+        <div class="test-section" id="profile-test">
+            <h3>3. 检查用户验证状态</h3>
+            <button onclick="testGetProfile()" class="success-btn">获取当前用户信息</button>
+            <div id="profile-result"></div>
+        </div>
+        
+        <div class="test-section" id="forgot-password-test">
+            <h3>4. 忘记密码功能测试</h3>
+            <div class="form-group">
+                <input type="email" id="forgot-email" placeholder="邮箱" value="test@example.com">
+            </div>
+            <button onclick="testForgotPassword()" class="warning-btn">发送密码重置邮件</button>
+            <div id="forgot-result"></div>
+        </div>
+
+        <div class="test-section" id="email-config-test">
+            <h3>5. 邮件配置测试</h3>
+            <button onclick="testEmailConfig()" class="primary">测试邮件服务器连接</button>
+            <div id="config-result"></div>
+        </div>
+
+        <div class="success-box">
+            <h3>✅ 测试完成后的操作</h3>
+            <p>1. 检查您的邮箱（包括垃圾邮件文件夹）</p>
+            <p>2. 点击验证链接完成邮箱验证</p>
+            <p>3. 返回主应用测试完整功能</p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3001/api';
+        let authToken = null;
+        
+        async function apiCall(url, options = {}) {
+            try {
+                const headers = {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                };
+                
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+                
+                const response = await fetch(`${API_BASE_URL}${url}`, {
+                    headers,
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('API调用错误:', error);
+                throw error;
+            }
+        }
+        
+        async function testRegister() {
+            const resultDiv = document.getElementById('register-result');
+            resultDiv.innerHTML = '<p>注册中...</p>';
+            resultDiv.className = 'test-section loading';
+            
+            const userData = {
+                email: document.getElementById('reg-email').value,
+                name: document.getElementById('reg-name').value,
+                phone: document.getElementById('reg-phone').value,
+                password: document.getElementById('reg-password').value
+            };
+            
+            try {
+                const response = await apiCall('/auth/register', {
+                    method: 'POST',
+                    body: JSON.stringify(userData)
+                });
+                
+                if (response.success) {
+                    authToken = response.data.token;
+                    const emailStatus = response.data.emailSent ? '✅ 验证邮件已发送' : '❌ 验证邮件发送失败';
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ 注册成功！</p>
+                        <p><strong>邮箱验证状态：</strong> ${emailStatus}</p>
+                        <p><strong>Token：</strong> ${authToken.substring(0, 20)}...</p>
+                        <pre>${JSON.stringify(response, null, 2)}</pre>
+                    `;
+                    resultDiv.className = 'test-section success';
+                } else {
+                    resultDiv.innerHTML = `
+                        <p class="error">❌ 注册失败</p>
+                        <p>${response.message}</p>
+                    `;
+                    resultDiv.className = 'test-section error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ 注册失败</p>
+                    <p>错误: ${error.message}</p>
+                `;
+                resultDiv.className = 'test-section error';
+            }
+        }
+        
+        async function testResendVerification() {
+            const resultDiv = document.getElementById('resend-result');
+            resultDiv.innerHTML = '<p>重新发送中...</p>';
+            resultDiv.className = 'test-section loading';
+            
+            if (!authToken) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ 请先注册或登录</p>
+                `;
+                resultDiv.className = 'test-section error';
+                return;
+            }
+            
+            try {
+                const response = await apiCall('/auth/resend-verification', {
+                    method: 'POST'
+                });
+                
+                if (response.success) {
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ 验证邮件重新发送成功！</p>
+                        <p>请查收您的邮箱</p>
+                        <pre>${JSON.stringify(response, null, 2)}</pre>
+                    `;
+                    resultDiv.className = 'test-section success';
+                } else {
+                    resultDiv.innerHTML = `
+                        <p class="error">❌ 重新发送失败</p>
+                        <p>${response.message}</p>
+                    `;
+                    resultDiv.className = 'test-section error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ 重新发送失败</p>
+                    <p>错误: ${error.message}</p>
+                `;
+                resultDiv.className = 'test-section error';
+            }
+        }
+        
+        async function testGetProfile() {
+            const resultDiv = document.getElementById('profile-result');
+            resultDiv.innerHTML = '<p>获取用户信息中...</p>';
+            resultDiv.className = 'test-section loading';
+            
+            if (!authToken) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ 请先注册或登录</p>
+                `;
+                resultDiv.className = 'test-section error';
+                return;
+            }
+            
+            try {
+                const response = await apiCall('/auth/me');
+                
+                if (response.success) {
+                    const verificationStatus = response.data.isVerified ? '✅ 已验证' : '❌ 未验证';
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ 获取用户信息成功！</p>
+                        <p><strong>邮箱验证状态：</strong> ${verificationStatus}</p>
+                        <pre>${JSON.stringify(response, null, 2)}</pre>
+                    `;
+                    resultDiv.className = 'test-section success';
+                } else {
+                    resultDiv.innerHTML = `
+                        <p class="error">❌ 获取用户信息失败</p>
+                        <p>${response.message}</p>
+                    `;
+                    resultDiv.className = 'test-section error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ 获取用户信息失败</p>
+                    <p>错误: ${error.message}</p>
+                `;
+                resultDiv.className = 'test-section error';
+            }
+        }
+        
+        async function testForgotPassword() {
+            const resultDiv = document.getElementById('forgot-result');
+            resultDiv.innerHTML = '<p>发送密码重置邮件中...</p>';
+            resultDiv.className = 'test-section loading';
+            
+            const email = document.getElementById('forgot-email').value;
+            
+            try {
+                const response = await apiCall('/auth/forgot-password', {
+                    method: 'POST',
+                    body: JSON.stringify({ email })
+                });
+                
+                if (response.success) {
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ 密码重置邮件发送成功！</p>
+                        <p>请查收您的邮箱</p>
+                        <pre>${JSON.stringify(response, null, 2)}</pre>
+                    `;
+                    resultDiv.className = 'test-section success';
+                } else {
+                    resultDiv.innerHTML = `
+                        <p class="error">❌ 发送失败</p>
+                        <p>${response.message}</p>
+                    `;
+                    resultDiv.className = 'test-section error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ 发送失败</p>
+                    <p>错误: ${error.message}</p>
+                `;
+                resultDiv.className = 'test-section error';
+            }
+        }
+        
+        async function testEmailConfig() {
+            const resultDiv = document.getElementById('config-result');
+            resultDiv.innerHTML = '<p>测试邮件配置中...</p>';
+            resultDiv.className = 'test-section loading';
+            
+            try {
+                // 这里我们通过尝试发送一封测试邮件来验证配置
+                const response = await apiCall('/auth/forgot-password', {
+                    method: 'POST',
+                    body: JSON.stringify({ email: 'test-config@example.com' })
+                });
+                
+                // 如果请求成功，说明邮件服务配置正常
+                resultDiv.innerHTML = `
+                    <p class="success">✅ 邮件服务配置正常！</p>
+                    <p>服务器可以正常处理邮件发送请求</p>
+                `;
+                resultDiv.className = 'test-section success';
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ 邮件服务配置可能有问题</p>
+                    <p>错误: ${error.message}</p>
+                    <p><strong>请检查：</strong></p>
+                    <ul>
+                        <li>是否创建了 .env 文件</li>
+                        <li>邮件服务配置是否正确</li>
+                        <li>网络连接是否正常</li>
+                    </ul>
+                `;
+                resultDiv.className = 'test-section error';
+            }
+        }
+    </script>
+</body>
+</html>

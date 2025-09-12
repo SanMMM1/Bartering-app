@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户空值修复测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; border: none; border-radius: 5px; }
+        .primary { background: #007bff; color: white; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 用户空值修复测试</h1>
+        
+        <div class="test-section info">
+            <h3>📋 测试说明</h3>
+            <p>此页面用于测试修复后的用户空值问题：</p>
+            <ul>
+                <li>✅ 未登录状态下访问用户相关功能不会报错</li>
+                <li>✅ 用户对象为null时安全访问属性</li>
+                <li>✅ 登录后功能正常工作</li>
+            </ul>
+        </div>
+        
+        <div class="test-section">
+            <h3>1. 测试主应用</h3>
+            <p>点击下面的按钮打开主应用，测试修复效果：</p>
+            <button class="primary" onclick="openMainApp()">打开主应用</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>2. 测试步骤</h3>
+            <ol>
+                <li><strong>未登录状态测试：</strong>
+                    <ul>
+                        <li>打开主应用，应该看到登录/注册按钮</li>
+                        <li>不应该出现 "Cannot read properties of null" 错误</li>
+                        <li>页面应该正常显示商品列表</li>
+                    </ul>
+                </li>
+                <li><strong>登录后测试：</strong>
+                    <ul>
+                        <li>注册或登录一个用户</li>
+                        <li>测试发布商品功能</li>
+                        <li>测试聊天功能</li>
+                        <li>测试商品管理功能</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+        
+        <div class="test-section">
+            <h3>3. 修复内容</h3>
+            <pre>修复的问题：
+1. user.id → user?.id (安全访问)
+2. 添加用户登录检查
+3. 防止未登录用户执行需要认证的操作
+
+修复的函数：
+- handlePost: 添加用户检查
+- sendMsg: 添加用户检查  
+- ItemCard: 安全访问user.id
+- ChatDrawer: 安全访问user.id
+- Post按钮: 添加安全检查</pre>
+        </div>
+        
+        <div class="test-section success">
+            <h3>✅ 预期结果</h3>
+            <p>修复后应该：</p>
+            <ul>
+                <li>未登录时页面正常显示，无错误</li>
+                <li>需要登录的功能会提示"请先登录"</li>
+                <li>登录后所有功能正常工作</li>
+                <li>控制台无 "Cannot read properties of null" 错误</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function openMainApp() {
+            window.open('index.html', '_blank');
+        }
+        
+        // 页面加载时检查主应用是否可访问
+        window.onload = function() {
+            fetch('http://localhost:3001/api/health')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('✅ 后端服务器正常运行');
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ 后端服务器连接失败:', error);
+                    alert('请确保后端服务器正在运行 (npm start)');
+                });
+        };
+    </script>
+</body>
+</html>

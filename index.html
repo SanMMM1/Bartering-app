@@ -67,7 +67,12 @@
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script type="text/babel">
   
-const { useEffect, useMemo, useRef, useState } = React;
+const { useEffect, useMemo, useRef, useState, useCallback } = React;
+
+// API配置
+const API_BASE_URL = 'http://localhost:3001/api';
+
+// 工具函数
 const uid = () => Math.random().toString(36).slice(2, 10);
 const now = () => new Date().toISOString();
 const timeAgo = (iso) => {
@@ -82,70 +87,279 @@ const timeAgo = (iso) => {
   return new Date(iso).toLocaleDateString();
 };
 const fmtPrice = (n) => (Number(n) || 0).toLocaleString(undefined, { style: "currency", currency: "USD" });
+
+// 常量定义
 const CATEGORIES = ["Electronics","Appliances","Furniture","Clothing","Books","Sports","Beauty & Personal Care","Tickets","Other"];
 const CONDITIONS = ["Brand New","Like New","Good","Fair"];
 const LOCATIONS = ["Cleveland","Columbus","Pittsburgh","Beijing","Shanghai","Guangzhou","Shunyi"];
-const LS = { listings:"campus_xianyu_listings", favorites:"campus_xianyu_favs", messages:"campus_xianyu_msgs", user:"campus_xianyu_user" };
+
+// 本地存储配置（仅用于用户偏好和收藏）
+const LS = { favorites:"campus_xianyu_favs", messages:"campus_xianyu_msgs", user:"campus_xianyu_user" };
 const load = (k,f)=>{ try{ const v = JSON.parse(localStorage.getItem(k)); return v ?? f; }catch{ return f; } };
 const save = (k,v)=> localStorage.setItem(k, JSON.stringify(v));
-const DEMO = [
-  { id: uid(), title: "iPad Air 5 64GB Blue", price: 360, category: "Electronics", condition: "Like New", location: "Cleveland",
-    desc: "Used for taking notes in class, good battery health, comes with pen case and protective cover.",
-    images: ["https://images.unsplash.com/photo-1585793430381-c8ce1a01d7f9?q=80&w=1200&auto=format&fit=crop"],
-    seller: { id: "u1", name: "Alice", avatar: "https://i.pravatar.cc/100?img=5" },
-    createdAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString(), sold: false },
-  { id: uid(), title: "IKEA Table & Chair Set", price: 40, category: "Furniture", condition: "Good", location: "Cleveland",
-    desc: "Graduating soon, minor scratches, pickup preferred.",
-    images: ["https://images.unsplash.com/photo-1519710164239-da123dc03ef4?q=80&w=1200&auto=format&fit=crop"],
-    seller: { id: "u2", name: "Ben", avatar: "https://i.pravatar.cc/100?img=13" },
-    createdAt: new Date(Date.now() - 22 * 3600 * 1000).toISOString(), sold: false },
-  { id: uid(), title: "Nike Running Shoes Size 9", price: 25, category: "Sports", condition: "Fair", location: "Cleveland",
-    desc: "Size doesn't fit, already cleaned.",
-    images: ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=1200&auto=format&fit=crop"],
-    seller: { id: "u3", name: "Cara", avatar: "https://i.pravatar.cc/100?img=23" },
-    createdAt: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(), sold: false },
-  { id: uid(), title: "Microwave 700W", price: 30, category: "Appliances", condition: "Good", location: "Cleveland",
-    desc: "Used in dorm, like new condition, comes with tray.",
-    images: ["https://images.unsplash.com/photo-1597143720588-4baf4a4b219c?q=80&w=1200&auto=format&fit=crop"],
-    seller: { id: "u4", name: "Dan", avatar: "https://i.pravatar.cc/100?img=33" },
-    createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(), sold: false },
-];
+
+// API调用函数
+const apiCall = async (url, options = {}) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      },
+      ...options
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('API调用错误:', error);
+    throw error;
+  }
+};
+
+// 商品相关API
+const listingsAPI = {
+  // 获取商品列表
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return await apiCall(`/listings${queryString ? '?' + queryString : ''}`);
+  },
+  
+  // 获取单个商品
+  getById: async (id) => {
+    return await apiCall(`/listings/${id}`);
+  },
+  
+  // 创建商品
+  create: async (listing) => {
+    return await apiCall('/listings', {
+      method: 'POST',
+      body: JSON.stringify(listing)
+    });
+  },
+  
+  // 更新商品
+  update: async (id, listing) => {
+    return await apiCall(`/listings/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(listing)
+    });
+  },
+  
+  // 删除商品
+  delete: async (id) => {
+    return await apiCall(`/listings/${id}`, {
+      method: 'DELETE'
+    });
+  },
+  
+  // 标记售出状态
+  markSold: async (id, sold) => {
+    return await apiCall(`/listings/${id}/sold`, {
+      method: 'PATCH',
+      body: JSON.stringify({ sold })
+    });
+  },
+  
+  // 获取用户商品
+  getByUser: async (userId, sold = null) => {
+    const params = sold !== null ? { sold } : {};
+    const queryString = new URLSearchParams(params).toString();
+    return await apiCall(`/listings/user/${userId}${queryString ? '?' + queryString : ''}`);
+  }
+};
 function App(){
   const [user, setUser] = useState(()=> load(LS.user, { id:"me", name:"Me", avatar:"https://i.pravatar.cc/100?img=15" }));
-  const [listings, setListings] = useState(()=> { const v = load(LS.listings, null); if (v?.length) return v; save(LS.listings, DEMO); return DEMO; });
+  const [listings, setListings] = useState([]);
   const [favorites, setFavorites] = useState(()=> load(LS.favorites, {}));
   const [messages, setMessages] = useState(()=> load(LS.messages, {}));
   const [q,setQ] = useState(""); const [cat,setCat] = useState("All"); const [cond,setCond] = useState("All"); const [loc,setLoc] = useState("All");
   const [minp,setMinp] = useState(""); const [maxp,setMaxp] = useState(""); const [sort,setSort] = useState("Latest"); const [tab,setTab] = useState("explore");
   const [posting,setPosting] = useState(false); const [chatFor,setChatFor] = useState(null);
-  useEffect(()=>save(LS.listings, listings),[listings]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
+  // 保存用户偏好到localStorage
   useEffect(()=>save(LS.favorites, favorites),[favorites]);
   useEffect(()=>save(LS.messages, messages),[messages]);
   useEffect(()=>save(LS.user, user),[user]);
-  const data = useMemo(()=>{
-    let d = listings.filter(it=>!it.sold);
-    if (tab==="favorites") d = d.filter(it=>favorites[it.id]);
-    if (tab==="mine") d = listings.filter(it=>it.seller?.id===user.id);
-    if (q.trim()){ const key=q.trim().toLowerCase(); d = d.filter(it=>(`${it.title} ${it.desc}`).toLowerCase().includes(key)); }
-    if (cat!=="All") d = d.filter(it=>it.category===cat);
-    if (cond!=="All") d = d.filter(it=>it.condition===cond);
-    if (loc!=="All") d = d.filter(it=>it.location===loc);
-    const min=Number(minp), max=Number(maxp);
-    if (!Number.isNaN(min) && minp!=="") d = d.filter(it=>it.price>=min);
-    if (!Number.isNaN(max) && maxp!=="") d = d.filter(it=>it.price<=max);
-    if (sort==="Price ↑") d.sort((a,b)=>a.price-b.price);
-    else if (sort==="Price ↓") d.sort((a,b)=>b.price-a.price);
-    else d.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  
+  // 从API加载商品数据
+  const loadListings = useCallback(async (params = {}) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await listingsAPI.getAll(params);
+      if (response.success) {
+        setListings(response.data);
+      } else {
+        setError('加载商品数据失败');
+      }
+    } catch (err) {
+      console.error('加载商品失败:', err);
+      setError('无法连接到服务器，请检查后端是否运行');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  // 初始加载数据
+  useEffect(() => {
+    loadListings();
+  }, [loadListings]);
+  // 构建API查询参数
+  const apiParams = useMemo(() => {
+    const params = {};
+    if (cat !== "All") params.category = cat;
+    if (cond !== "All") params.condition = cond;
+    if (loc !== "All") params.location = loc;
+    if (minp) params.minPrice = minp;
+    if (maxp) params.maxPrice = maxp;
+    if (q.trim()) params.search = q.trim();
+    
+    // 排序参数
+    if (sort === "Price ↑") {
+      params.sort = "price";
+      params.order = "asc";
+    } else if (sort === "Price ↓") {
+      params.sort = "price";
+      params.order = "desc";
+    } else {
+      params.sort = "createdAt";
+      params.order = "desc";
+    }
+    
+    return params;
+  }, [cat, cond, loc, minp, maxp, q, sort]);
+
+  // 加载用户商品
+  const loadUserListings = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await listingsAPI.getByUser(user.id);
+      if (response.success) {
+        setListings(response.data);
+      } else {
+        setError('加载用户商品失败');
+      }
+    } catch (err) {
+      console.error('加载用户商品失败:', err);
+      setError('无法连接到服务器');
+    } finally {
+      setLoading(false);
+    }
+  }, [user.id]);
+
+  // 当筛选条件改变时重新加载数据
+  useEffect(() => {
+    if (tab === "explore") {
+      loadListings(apiParams);
+    } else if (tab === "mine") {
+      loadUserListings();
+    }
+  }, [apiParams, tab, loadListings, loadUserListings]);
+
+
+  // 客户端筛选数据（用于收藏和搜索）
+  const data = useMemo(() => {
+    let d = [...listings];
+    
+    if (tab === "favorites") {
+      d = d.filter(it => favorites[it._id || it.id]);
+    }
+    
+    // 如果API不支持搜索，则进行客户端搜索
+    if (q.trim() && !apiParams.search) {
+      const key = q.trim().toLowerCase();
+      d = d.filter(it => 
+        (`${it.title} ${it.description || it.desc}`).toLowerCase().includes(key)
+      );
+    }
+    
     return d;
-  },[listings,favorites,tab,q,cat,cond,loc,minp,maxp,sort,user.id]);
+  }, [listings, favorites, tab, q, apiParams.search]);
   const toggleFav = (id)=> setFavorites(f=>({ ...f, [id]: !f[id] }));
-  const handlePost = (item)=>{ const newItem = { id: uid(), createdAt: now(), sold:false, seller:{id:user.id,name:user.name,avatar:user.avatar}, ...item }; setListings(arr=>[newItem,...arr]); setPosting(false); setTab("mine"); };
-  const markSold = (id,sold=true)=> setListings(arr=>arr.map(it=>it.id===id?{...it,sold}:it));
-  const removeItem = (id)=> setListings(arr=>arr.filter(it=>it.id!==id));
+  
+  const handlePost = async (item) => {
+    try {
+      const newItem = {
+        ...item,
+        seller: {
+          id: user.id,
+          name: user.name,
+          avatar: user.avatar
+        }
+      };
+      
+      const response = await listingsAPI.create(newItem);
+      if (response.success) {
+        // 重新加载数据
+        if (tab === "mine") {
+          loadUserListings();
+        } else {
+          loadListings(); // 重新加载所有商品
+        }
+        setPosting(false);
+        setTab("mine");
+      } else {
+        setError('发布商品失败');
+      }
+    } catch (err) {
+      console.error('发布商品失败:', err);
+      setError('发布商品失败，请重试');
+    }
+  };
+  
+  const markSold = async (id, sold = true) => {
+    try {
+      const response = await listingsAPI.markSold(id, sold);
+      if (response.success) {
+        // 更新本地状态
+        setListings(arr => arr.map(it => (it._id || it.id) === id ? {...it, sold} : it));
+      } else {
+        setError('更新商品状态失败');
+      }
+    } catch (err) {
+      console.error('更新商品状态失败:', err);
+      setError('更新商品状态失败，请重试');
+    }
+  };
+  
+  const removeItem = async (id) => {
+    try {
+      const response = await listingsAPI.delete(id);
+      if (response.success) {
+        // 重新加载数据
+        if (tab === "mine") {
+          loadUserListings();
+        } else {
+          loadListings(); // 重新加载所有商品
+        }
+      } else {
+        setError('删除商品失败');
+      }
+    } catch (err) {
+      console.error('删除商品失败:', err);
+      setError('删除商品失败，请重试');
+    }
+  };
   const sendMsg = (listingId,text)=>{
     if(!text.trim()) return;
-    setMessages(m=>{ const arr = m[listingId]?[...m[listingId]]:[]; arr.push({ id: uid(), from: user.id, text, at: now() });
-      setTimeout(()=>{ setMessages(mm=>{ const back = mm[listingId]?[...mm[listingId]]:[]; back.push({ id: uid(), from: "seller", text: "Sure, I'm available for pickup~", at: now() }); return { ...mm, [listingId]: back }; }); }, 400);
+    setMessages(m=>{ 
+      const arr = m[listingId]?[...m[listingId]]:[]; 
+      arr.push({ id: uid(), from: user.id, text, at: now() });
+      setTimeout(()=>{ 
+        setMessages(mm=>{ 
+          const back = mm[listingId]?[...mm[listingId]]:[]; 
+          back.push({ id: uid(), from: "seller", text: "Sure, I'm available for pickup~", at: now() }); 
+          return { ...mm, [listingId]: back }; 
+        }); 
+      }, 400);
       return { ...m, [listingId]: arr };
     });
   };
@@ -154,13 +368,13 @@ function App(){
       <div className="img-wrap">
         <img src={item.images?.[0]} alt={item.title}/>
         <div className="chip">{item.category}</div>
-        <button className={"fav"+(favorites[item.id]?" on":"")} onClick={()=>toggleFav(item.id)}>♥</button>
+        <button className={"fav"+(favorites[item._id || item.id]?" on":"")} onClick={()=>toggleFav(item._id || item.id)}>♥</button>
         {item.sold && <div className="sold">Sold</div>}
       </div>
       <div className="meta">
         <div className="title">{item.title}</div>
         <div className="price">{fmtPrice(item.price)}</div>
-        <div className="desc">{item.desc}</div>
+        <div className="desc">{item.description || item.desc}</div>
         <div className="row">
           <div className="seller"><img src={item.seller?.avatar}/><span>{item.seller?.name}</span></div>
           <div className="loc">{item.location}</div>
@@ -169,9 +383,9 @@ function App(){
           <span>{item.condition} · {timeAgo(item.createdAt)}</span>
           <div className="actions">
             <button onClick={()=>setChatFor(item)}>Chat</button>
-            {item.seller?.id===user.id && !item.sold && <button onClick={()=>markSold(item.id,true)}>Mark Sold</button>}
-            {item.seller?.id===user.id && item.sold && <button onClick={()=>markSold(item.id,false)}>Unmark Sold</button>}
-            {item.seller?.id===user.id && <button onClick={()=>removeItem(item.id)}>Delete</button>}
+            {item.seller?.id===user.id && !item.sold && <button onClick={()=>markSold(item._id || item.id,true)}>Mark Sold</button>}
+            {item.seller?.id===user.id && item.sold && <button onClick={()=>markSold(item._id || item.id,false)}>Unmark Sold</button>}
+            {item.seller?.id===user.id && <button onClick={()=>removeItem(item._id || item.id)}>Delete</button>}
           </div>
         </div>
       </div>
@@ -180,7 +394,7 @@ function App(){
   return (
     <>
       <div className="bar">
-        <div className="brand">◎ Campus Marketplace · MVP</div>
+        <div className="brand">◎ Campus Marketplace · MongoDB</div>
         <div className="search"><input placeholder="Search: title/description..." value={q} onChange={e=>setQ(e.target.value)} /></div>
         <div className="tabs">
           <button className={tab==='explore'?'on':''} onClick={()=>setTab('explore')}>Explore</button>
@@ -189,6 +403,11 @@ function App(){
           <button className="primary" onClick={()=>setPosting(true)}>＋ Post</button>
         </div>
       </div>
+      {error && (
+        <div style={{background: '#ff6b6b', color: 'white', padding: '8px', textAlign: 'center', fontSize: '14px'}}>
+          ⚠️ {error} - 请确保后端服务器正在运行 (http://localhost:3001)
+        </div>
+      )}
       <div className="filters">
         <select value={cat} onChange={e=>setCat(e.target.value)}><option>All</option>{CATEGORIES.map(c=><option key={c}>{c}</option>)}</select>
         <select value={cond} onChange={e=>setCond(e.target.value)}><option>All</option>{CONDITIONS.map(c=><option key={c}>{c}</option>)}</select>
@@ -198,10 +417,24 @@ function App(){
         <select value={sort} onChange={e=>setSort(e.target.value)}><option>Latest</option><option>Price ↑</option><option>Price ↓</option></select>
       </div>
       <div className="grid">
-        {data.length===0 ? <div className="empty">No items found matching your criteria.</div> : data.map(it=><ItemCard key={it.id} item={it}/>)}
+        {loading ? (
+          <div className="empty">加载中...</div>
+        ) : error ? (
+          <div className="empty" style={{color: '#ff6b6b'}}>
+            {error}
+            <br/>
+            <button onClick={() => window.location.reload()} style={{marginTop: '10px', padding: '8px 16px', background: '#97f3d2', color: '#0a0f1d', border: 'none', borderRadius: '8px', cursor: 'pointer'}}>
+              重新加载
+            </button>
+          </div>
+        ) : data.length === 0 ? (
+          <div className="empty">No items found matching your criteria.</div>
+        ) : (
+          data.map(it => <ItemCard key={it._id || it.id} item={it}/>)
+        )}
       </div>
       {posting && <PostModal onClose={()=>setPosting(false)} onPost={(item)=>{ handlePost(item); }}/>} 
-      {chatFor && <ChatDrawer item={chatFor} onClose={()=>setChatFor(null)} messages={messages[chatFor.id]||[]} onSend={(id,text)=>sendMsg(id,text)} user={user} />}
+      {chatFor && <ChatDrawer item={chatFor} onClose={()=>setChatFor(null)} messages={messages[chatFor._id || chatFor.id]||[]} onSend={(id,text)=>sendMsg(id,text)} user={user} />}
     </>
   );
 }
@@ -212,7 +445,18 @@ function PostModal({ onClose, onPost }){
   const [images,setImages]=useState([]);
   const toBase64 = (file) => new Promise((res, rej) => { const reader = new FileReader(); reader.onload = () => res(reader.result); reader.onerror = rej; reader.readAsDataURL(file); });
   const handleFiles = async (files) => { const arr=[]; for (const f of files){ if (!f.type.startsWith("image/")) continue; const b64 = await toBase64(f); arr.push(b64);} setImages(prev=>[...prev,...arr].slice(0,6)); };
-  const submit = () => { if (!title.trim() || !price) return alert("Please fill in title and price"); onPost({ title, price:Number(price), category, condition, location, desc, images: images.length?images:["https://images.unsplash.com/photo-1555041469-a586c61ea9bc?q=80&w=1200&auto=format&fit=crop"] }); };
+  const submit = () => { 
+    if (!title.trim() || !price) return alert("Please fill in title and price"); 
+    onPost({ 
+      title, 
+      price: Number(price), 
+      category, 
+      condition, 
+      location, 
+      description: desc, // 使用description字段名
+      images: images.length ? images : ["https://images.unsplash.com/photo-1555041469-a586c61ea9bc?q=80&w=1200&auto=format&fit=crop"] 
+    }); 
+  };
   return (
     <div className="modal">
       <div className="panel">

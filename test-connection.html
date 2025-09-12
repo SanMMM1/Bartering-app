@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API连接测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .loading { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>校园二手交易平台 - API连接测试</h1>
+    
+    <div class="test-section" id="health-test">
+        <h3>1. 健康检查测试</h3>
+        <button onclick="testHealth()">测试健康检查</button>
+        <div id="health-result"></div>
+    </div>
+    
+    <div class="test-section" id="listings-test">
+        <h3>2. 商品列表测试</h3>
+        <button onclick="testListings()">获取商品列表</button>
+        <div id="listings-result"></div>
+    </div>
+    
+    <div class="test-section" id="create-test">
+        <h3>3. 创建商品测试</h3>
+        <button onclick="testCreateListing()">创建测试商品</button>
+        <div id="create-result"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3001/api';
+        
+        async function apiCall(url, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE_URL}${url}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('API调用错误:', error);
+                throw error;
+            }
+        }
+        
+        async function testHealth() {
+            const resultDiv = document.getElementById('health-result');
+            resultDiv.innerHTML = '<p>测试中...</p>';
+            resultDiv.className = 'test-section loading';
+            
+            try {
+                const response = await apiCall('/health');
+                resultDiv.innerHTML = `
+                    <p class="success">✅ 健康检查成功！</p>
+                    <pre>${JSON.stringify(response, null, 2)}</pre>
+                `;
+                resultDiv.className = 'test-section success';
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ 健康检查失败</p>
+                    <p>错误: ${error.message}</p>
+                `;
+                resultDiv.className = 'test-section error';
+            }
+        }
+        
+        async function testListings() {
+            const resultDiv = document.getElementById('listings-result');
+            resultDiv.innerHTML = '<p>获取商品列表中...</p>';
+            resultDiv.className = 'test-section loading';
+            
+            try {
+                const response = await apiCall('/listings');
+                resultDiv.innerHTML = `
+                    <p class="success">✅ 获取商品列表成功！</p>
+                    <p>共找到 ${response.data.length} 个商品</p>
+                    <pre>${JSON.stringify(response, null, 2)}</pre>
+                `;
+                resultDiv.className = 'test-section success';
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ 获取商品列表失败</p>
+                    <p>错误: ${error.message}</p>
+                `;
+                resultDiv.className = 'test-section error';
+            }
+        }
+        
+        async function testCreateListing() {
+            const resultDiv = document.getElementById('create-result');
+            resultDiv.innerHTML = '<p>创建测试商品中...</p>';
+            resultDiv.className = 'test-section loading';
+            
+            const testListing = {
+                title: "测试商品 - " + new Date().toLocaleTimeString(),
+                description: "这是一个测试商品，用于验证API连接",
+                price: 99,
+                category: "Electronics",
+                condition: "Like New",
+                location: "Cleveland",
+                images: ["https://images.unsplash.com/photo-1555041469-a586c61ea9bc?q=80&w=1200&auto=format&fit=crop"],
+                seller: {
+                    id: "test-user",
+                    name: "测试用户",
+                    avatar: "https://i.pravatar.cc/100?img=15"
+                }
+            };
+            
+            try {
+                const response = await apiCall('/listings', {
+                    method: 'POST',
+                    body: JSON.stringify(testListing)
+                });
+                resultDiv.innerHTML = `
+                    <p class="success">✅ 创建商品成功！</p>
+                    <p>商品ID: ${response.data._id}</p>
+                    <pre>${JSON.stringify(response, null, 2)}</pre>
+                `;
+                resultDiv.className = 'test-section success';
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ 创建商品失败</p>
+                    <p>错误: ${error.message}</p>
+                `;
+                resultDiv.className = 'test-section error';
+            }
+        }
+        
+        // 页面加载时自动运行健康检查
+        window.onload = function() {
+            testHealth();
+        };
+    </script>
+</body>
+</html>

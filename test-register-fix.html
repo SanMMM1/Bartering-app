@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册修复测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; border: none; border-radius: 5px; }
+        .primary { background: #007bff; color: white; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; font-size: 12px; }
+        input { padding: 8px; margin: 5px; width: 200px; border: 1px solid #ddd; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 注册功能修复测试</h1>
+        
+        <div class="test-section info">
+            <h3>📋 修复内容</h3>
+            <p>修复了注册时的 HTTP 400 错误：</p>
+            <ul>
+                <li>✅ 后端：手机号验证规则优化</li>
+                <li>✅ 前端：过滤空手机号字段</li>
+                <li>✅ 验证：空手机号不再导致验证失败</li>
+            </ul>
+        </div>
+        
+        <div class="test-section">
+            <h3>1. 测试注册（无手机号）</h3>
+            <div>
+                <input type="email" id="email1" placeholder="邮箱" value="test1@example.com">
+                <input type="text" id="name1" placeholder="用户名" value="测试用户1">
+                <input type="password" id="password1" placeholder="密码" value="password123">
+                <br>
+                <button onclick="testRegister1()" class="primary">测试注册（无手机号）</button>
+            </div>
+            <div id="result1"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>2. 测试注册（有手机号）</h3>
+            <div>
+                <input type="email" id="email2" placeholder="邮箱" value="test2@example.com">
+                <input type="text" id="name2" placeholder="用户名" value="测试用户2">
+                <input type="password" id="password2" placeholder="密码" value="password123">
+                <input type="tel" id="phone2" placeholder="手机号" value="1234567890">
+                <br>
+                <button onclick="testRegister2()" class="primary">测试注册（有手机号）</button>
+            </div>
+            <div id="result2"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>3. 测试主应用</h3>
+            <p>点击下面的按钮打开主应用，测试注册功能：</p>
+            <button onclick="openMainApp()" class="primary">打开主应用</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3001/api';
+        
+        async function apiCall(url, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE_URL}${url}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('API调用错误:', error);
+                throw error;
+            }
+        }
+        
+        async function testRegister1() {
+            const resultDiv = document.getElementById('result1');
+            resultDiv.innerHTML = '<p>注册中...</p>';
+            resultDiv.className = 'test-section';
+            
+            const userData = {
+                email: document.getElementById('email1').value,
+                name: document.getElementById('name1').value,
+                password: document.getElementById('password1').value
+                // 注意：没有phone字段
+            };
+            
+            try {
+                const response = await apiCall('/auth/register', {
+                    method: 'POST',
+                    body: JSON.stringify(userData)
+                });
+                
+                if (response.success) {
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ 注册成功！</p>
+                        <p>邮箱验证状态：${response.data.emailSent ? '✅ 验证邮件已发送' : '❌ 验证邮件发送失败'}</p>
+                        <pre>${JSON.stringify(response, null, 2)}</pre>
+                    `;
+                    resultDiv.className = 'test-section success';
+                } else {
+                    resultDiv.innerHTML = `
+                        <p class="error">❌ 注册失败</p>
+                        <p>${response.message}</p>
+                    `;
+                    resultDiv.className = 'test-section error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ 注册失败</p>
+                    <p>错误: ${error.message}</p>
+                `;
+                resultDiv.className = 'test-section error';
+            }
+        }
+        
+        async function testRegister2() {
+            const resultDiv = document.getElementById('result2');
+            resultDiv.innerHTML = '<p>注册中...</p>';
+            resultDiv.className = 'test-section';
+            
+            const userData = {
+                email: document.getElementById('email2').value,
+                name: document.getElementById('name2').value,
+                password: document.getElementById('password2').value,
+                phone: document.getElementById('phone2').value
+            };
+            
+            try {
+                const response = await apiCall('/auth/register', {
+                    method: 'POST',
+                    body: JSON.stringify(userData)
+                });
+                
+                if (response.success) {
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ 注册成功！</p>
+                        <p>邮箱验证状态：${response.data.emailSent ? '✅ 验证邮件已发送' : '❌ 验证邮件发送失败'}</p>
+                        <pre>${JSON.stringify(response, null, 2)}</pre>
+                    `;
+                    resultDiv.className = 'test-section success';
+                } else {
+                    resultDiv.innerHTML = `
+                        <p class="error">❌ 注册失败</p>
+                        <p>${response.message}</p>
+                    `;
+                    resultDiv.className = 'test-section error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ 注册失败</p>
+                    <p>错误: ${error.message}</p>
+                `;
+                resultDiv.className = 'test-section error';
+            }
+        }
+        
+        function openMainApp() {
+            window.open('index.html', '_blank');
+        }
+        
+        // 页面加载时检查服务器状态
+        window.onload = function() {
+            fetch('http://localhost:3001/api/health')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('✅ 后端服务器正常运行');
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ 后端服务器连接失败:', error);
+                    alert('请确保后端服务器正在运行 (npm start)');
+                });
+        };
+    </script>
+</body>
+</html>

@@ -4,21 +4,21 @@ const bcrypt = require('bcryptjs');
 const userSchema = new mongoose.Schema({
   email: {
     type: String,
-    required: [true, '邮箱不能为空'],
+    required: [true, 'Email is required'],
     unique: true,
     lowercase: true,
     trim: true
   },
   password: {
     type: String,
-    required: [true, '密码不能为空'],
-    minlength: [6, '密码至少6个字符']
+    required: [true, 'Password is required'],
+    minlength: [6, 'Password must be at least 6 characters']
   },
   name: {
     type: String,
-    required: [true, '用户名不能为空'],
+    required: [true, 'Username is required'],
     trim: true,
-    maxlength: [50, '用户名不能超过50个字符']
+    maxlength: [50, 'Username cannot exceed 50 characters']
   },
   avatar: {
     type: String,
@@ -60,7 +60,7 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// 密码加密中间件
+// Password encryption middleware
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   
@@ -73,12 +73,12 @@ userSchema.pre('save', async function(next) {
   }
 });
 
-// 验证密码方法
+// Password verification method
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// 创建索引
+// Create indexes
 userSchema.index({ email: 1 });
 userSchema.index({ name: 1 });
 

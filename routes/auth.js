@@ -6,47 +6,47 @@ const { body, validationResult } = require('express-validator');
 const auth = require('../middleware/auth');
 const { sendVerificationEmail, sendPasswordResetEmail, generateVerificationToken } = require('../services/emailService');
 
-// 生成JWT Token
+// Generate JWT Token
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET || 'your_jwt_secret_key_here', {
     expiresIn: process.env.JWT_EXPIRE || '7d'
   });
 };
 
-// 用户注册
+// User Registration
 router.post('/register', [
-  body('email').isEmail().withMessage('请输入有效的邮箱地址'),
-  body('password').isLength({ min: 6 }).withMessage('密码至少6个字符'),
-  body('name').notEmpty().withMessage('用户名不能为空'),
-  body('phone').optional({ nullable: true, checkFalsy: true }).isMobilePhone().withMessage('请输入有效的手机号')
+  body('email').isEmail().withMessage('Please enter a valid email address'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('name').notEmpty().withMessage('Username cannot be empty'),
+  body('phone').optional({ nullable: true, checkFalsy: true }).isMobilePhone().withMessage('Please enter a valid phone number')
 ], async (req, res) => {
   try {
-    // 验证输入
+    // Validate input
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        message: '输入验证失败',
+        message: 'Input validation failed',
         errors: errors.array()
       });
     }
 
     const { email, password, name, phone } = req.body;
 
-    // 检查用户是否已存在
+    // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: '该邮箱已被注册'
+        message: 'Email already registered'
       });
     }
 
-    // 生成邮箱验证Token
+    // Generate email verification token
     const verificationToken = generateVerificationToken();
-    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24小时后过期
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // Expires in 24 hours
 
-    // 创建新用户
+    // Create new user
     const user = new User({
       email,
       password,
@@ -58,20 +58,20 @@ router.post('/register', [
 
     await user.save();
 
-    // 发送验证邮件
+    // Send verification email
     const emailResult = await sendVerificationEmail(email, name, verificationToken);
     
     if (!emailResult.success) {
-      console.error('发送验证邮件失败:', emailResult.error);
-      // 即使邮件发送失败，也返回成功，但提示用户检查邮箱
+      console.error('Failed to send verification email:', emailResult.error);
+      // Even if email sending fails, return success but prompt user to check email
     }
 
-    // 生成Token
+    // Generate token
     const token = generateToken(user._id);
 
     res.status(201).json({
       success: true,
-      message: emailResult.success ? '注册成功，请查收验证邮件' : '注册成功，但验证邮件发送失败，请联系客服',
+      message: emailResult.success ? 'Registration successful, please check your email for verification' : 'Registration successful, but verification email failed to send, please contact support',
       data: {
         token,
         user: {
@@ -86,56 +86,56 @@ router.post('/register', [
       }
     });
   } catch (error) {
-    console.error('注册错误:', error);
+    console.error('Registration error:', error);
     res.status(500).json({
       success: false,
-      message: '服务器内部错误'
+      message: 'Internal server error'
     });
   }
 });
 
-// 用户登录
+// User Login
 router.post('/login', [
-  body('email').isEmail().withMessage('请输入有效的邮箱地址'),
-  body('password').notEmpty().withMessage('密码不能为空')
+  body('email').isEmail().withMessage('Please enter a valid email address'),
+  body('password').notEmpty().withMessage('Password cannot be empty')
 ], async (req, res) => {
   try {
-    // 验证输入
+    // Validate input
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        message: '输入验证失败',
+        message: 'Input validation failed',
         errors: errors.array()
       });
     }
 
     const { email, password } = req.body;
 
-    // 查找用户
+    // Find user
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: '邮箱或密码错误'
+        message: 'Invalid email or password'
       });
     }
 
-    // 验证密码
+    // Verify password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: '邮箱或密码错误'
+        message: 'Invalid email or password'
       });
     }
 
-    // 生成Token
+    // Generate token
     const token = generateToken(user._id);
 
     res.json({
       success: true,
-      message: '登录成功',
+      message: 'Login successful',
       data: {
         token,
         user: {
@@ -149,22 +149,22 @@ router.post('/login', [
       }
     });
   } catch (error) {
-    console.error('登录错误:', error);
+    console.error('Login error:', error);
     res.status(500).json({
       success: false,
-      message: '服务器内部错误'
+      message: 'Internal server error'
     });
   }
 });
 
-// 获取当前用户信息
+// Get current user info
 router.get('/me', auth, async (req, res) => {
   try {
     const user = await User.findById(req.userId).select('-password');
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: '用户不存在'
+        message: 'User not found'
       });
     }
 
@@ -181,27 +181,27 @@ router.get('/me', auth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('获取用户信息错误:', error);
+    console.error('Get user info error:', error);
     res.status(500).json({
       success: false,
-      message: '服务器内部错误'
+      message: 'Internal server error'
     });
   }
 });
 
-// 更新用户资料
+// Update user profile
 router.put('/profile', auth, [
-  body('name').optional().notEmpty().withMessage('用户名不能为空'),
-  body('phone').optional({ nullable: true, checkFalsy: true }).isMobilePhone().withMessage('请输入有效的手机号'),
-  body('avatar').optional().isURL().withMessage('请输入有效的头像URL')
+  body('name').optional().notEmpty().withMessage('Username cannot be empty'),
+  body('phone').optional({ nullable: true, checkFalsy: true }).isMobilePhone().withMessage('Please enter a valid phone number'),
+  body('avatar').optional().isURL().withMessage('Please enter a valid avatar URL')
 ], async (req, res) => {
   try {
-    // 验证输入
+    // Validate input
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        message: '输入验证失败',
+        message: 'Input validation failed',
         errors: errors.array()
       });
     }
@@ -222,13 +222,13 @@ router.put('/profile', auth, [
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: '用户不存在'
+        message: 'User not found'
       });
     }
 
     res.json({
       success: true,
-      message: '资料更新成功',
+      message: 'Profile updated successfully',
       data: {
         id: user._id,
         email: user.email,
@@ -239,76 +239,76 @@ router.put('/profile', auth, [
       }
     });
   } catch (error) {
-    console.error('更新用户资料错误:', error);
+    console.error('Update user profile error:', error);
     res.status(500).json({
       success: false,
-      message: '服务器内部错误'
+      message: 'Internal server error'
     });
   }
 });
 
-// 修改密码
+// Change password
 router.put('/password', auth, [
-  body('currentPassword').notEmpty().withMessage('当前密码不能为空'),
-  body('newPassword').isLength({ min: 6 }).withMessage('新密码至少6个字符')
+  body('currentPassword').notEmpty().withMessage('Current password cannot be empty'),
+  body('newPassword').isLength({ min: 6 }).withMessage('New password must be at least 6 characters')
 ], async (req, res) => {
   try {
-    // 验证输入
+    // Validate input
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        message: '输入验证失败',
+        message: 'Input validation failed',
         errors: errors.array()
       });
     }
 
     const { currentPassword, newPassword } = req.body;
 
-    // 查找用户
+    // Find user
     const user = await User.findById(req.userId);
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: '用户不存在'
+        message: 'User not found'
       });
     }
 
-    // 验证当前密码
+    // Verify current password
     const isCurrentPasswordValid = await user.comparePassword(currentPassword);
     if (!isCurrentPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: '当前密码错误'
+        message: 'Current password is incorrect'
       });
     }
 
-    // 更新密码
+    // Update password
     user.password = newPassword;
     await user.save();
 
     res.json({
       success: true,
-      message: '密码修改成功'
+      message: 'Password changed successfully'
     });
   } catch (error) {
-    console.error('修改密码错误:', error);
+    console.error('Change password error:', error);
     res.status(500).json({
       success: false,
-      message: '服务器内部错误'
+      message: 'Internal server error'
     });
   }
 });
 
-// 用户登出（客户端处理，这里只是返回成功）
+// User logout (client-side handling, just return success)
 router.post('/logout', auth, (req, res) => {
   res.json({
     success: true,
-    message: '登出成功'
+    message: 'Logout successful'
   });
 });
 
-// 验证邮箱
+// Verify email
 router.get('/verify-email', async (req, res) => {
   try {
     const { token } = req.query;
@@ -316,11 +316,11 @@ router.get('/verify-email', async (req, res) => {
     if (!token) {
       return res.status(400).json({
         success: false,
-        message: '验证Token不能为空'
+        message: 'Verification token cannot be empty'
       });
     }
 
-    // 查找用户
+    // Find user
     const user = await User.findOne({
       emailVerificationToken: token,
       emailVerificationExpires: { $gt: Date.now() }
@@ -329,11 +329,11 @@ router.get('/verify-email', async (req, res) => {
     if (!user) {
       return res.status(400).json({
         success: false,
-        message: '验证Token无效或已过期'
+        message: 'Verification token is invalid or expired'
       });
     }
 
-    // 更新用户验证状态
+    // Update user verification status
     user.isVerified = true;
     user.emailVerificationToken = undefined;
     user.emailVerificationExpires = undefined;
@@ -341,18 +341,18 @@ router.get('/verify-email', async (req, res) => {
 
     res.json({
       success: true,
-      message: '邮箱验证成功！您现在可以正常使用平台的所有功能。'
+      message: 'Email verification successful! You can now use all platform features.'
     });
   } catch (error) {
-    console.error('邮箱验证错误:', error);
+    console.error('Email verification error:', error);
     res.status(500).json({
       success: false,
-      message: '服务器内部错误'
+      message: 'Internal server error'
     });
   }
 });
 
-// 重新发送验证邮件
+// Resend verification email
 router.post('/resend-verification', auth, async (req, res) => {
   try {
     const user = await User.findById(req.userId);
@@ -360,129 +360,129 @@ router.post('/resend-verification', auth, async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: '用户不存在'
+        message: 'User not found'
       });
     }
 
     if (user.isVerified) {
       return res.status(400).json({
         success: false,
-        message: '邮箱已经验证过了'
+        message: 'Email already verified'
       });
     }
 
-    // 生成新的验证Token
+    // Generate new verification token
     const verificationToken = generateVerificationToken();
     const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    // 更新用户验证信息
+    // Update user verification info
     user.emailVerificationToken = verificationToken;
     user.emailVerificationExpires = verificationExpires;
     await user.save();
 
-    // 发送验证邮件
+    // Send verification email
     const emailResult = await sendVerificationEmail(user.email, user.name, verificationToken);
     
     if (!emailResult.success) {
-      console.error('重新发送验证邮件失败:', emailResult.error);
+      console.error('Failed to send verification email:', emailResult.error);
       return res.status(500).json({
         success: false,
-        message: '验证邮件发送失败，请稍后重试'
+        message: 'Verification email failed to send, please try again later'
       });
     }
 
     res.json({
       success: true,
-      message: '验证邮件已重新发送，请查收'
+      message: 'Verification email resent, please check your email'
     });
   } catch (error) {
-    console.error('重新发送验证邮件错误:', error);
+    console.error('Resend verification email error:', error);
     res.status(500).json({
       success: false,
-      message: '服务器内部错误'
+      message: 'Internal server error'
     });
   }
 });
 
-// 请求密码重置
+// Request password reset
 router.post('/forgot-password', [
-  body('email').isEmail().withMessage('请输入有效的邮箱地址')
+  body('email').isEmail().withMessage('Please enter a valid email address')
 ], async (req, res) => {
   try {
-    // 验证输入
+    // Validate input
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        message: '输入验证失败',
+        message: 'Input validation failed',
         errors: errors.array()
       });
     }
 
     const { email } = req.body;
 
-    // 查找用户
+    // Find user
     const user = await User.findOne({ email });
     if (!user) {
-      // 为了安全，即使用户不存在也返回成功
+      // For security, return success even if user not found
       return res.json({
         success: true,
-        message: '如果该邮箱已注册，密码重置邮件已发送'
+        message: 'If the email is registered, password reset email has been sent'
       });
     }
 
-    // 生成密码重置Token
+    // Generate password reset token
     const resetToken = generateVerificationToken();
-    const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1小时后过期
+    const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // Expires in 1 hour
 
-    // 更新用户重置信息
+    // Update user reset info
     user.passwordResetToken = resetToken;
     user.passwordResetExpires = resetExpires;
     await user.save();
 
-    // 发送密码重置邮件
+    // Send password reset email
     const emailResult = await sendPasswordResetEmail(user.email, user.name, resetToken);
     
     if (!emailResult.success) {
-      console.error('发送密码重置邮件失败:', emailResult.error);
+      console.error('Failed to send password reset email:', emailResult.error);
       return res.status(500).json({
         success: false,
-        message: '密码重置邮件发送失败，请稍后重试'
+        message: 'Password reset email failed to send, please try again later'
       });
     }
 
     res.json({
       success: true,
-      message: '密码重置邮件已发送，请查收'
+      message: 'Password reset email sent, please check your email'
     });
   } catch (error) {
-    console.error('密码重置请求错误:', error);
+    console.error('Password reset request error:', error);
     res.status(500).json({
       success: false,
-      message: '服务器内部错误'
+      message: 'Internal server error'
     });
   }
 });
 
-// 重置密码
+// Reset password
 router.post('/reset-password', [
-  body('token').notEmpty().withMessage('重置Token不能为空'),
-  body('newPassword').isLength({ min: 6 }).withMessage('新密码至少6个字符')
+  body('token').notEmpty().withMessage('Reset token cannot be empty'),
+  body('newPassword').isLength({ min: 6 }).withMessage('New password must be at least 6 characters')
 ], async (req, res) => {
   try {
-    // 验证输入
+    // Validate input
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        message: '输入验证失败',
+        message: 'Input validation failed',
         errors: errors.array()
       });
     }
 
     const { token, newPassword } = req.body;
 
-    // 查找用户
+    // Find user
     const user = await User.findOne({
       passwordResetToken: token,
       passwordResetExpires: { $gt: Date.now() }
@@ -491,11 +491,11 @@ router.post('/reset-password', [
     if (!user) {
       return res.status(400).json({
         success: false,
-        message: '重置Token无效或已过期'
+        message: 'Reset token is invalid or expired'
       });
     }
 
-    // 更新密码
+    // Update password
     user.password = newPassword;
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
@@ -503,13 +503,13 @@ router.post('/reset-password', [
 
     res.json({
       success: true,
-      message: '密码重置成功，请使用新密码登录'
+      message: 'Password reset successful, please login with new password'
     });
   } catch (error) {
-    console.error('密码重置错误:', error);
+    console.error('Password reset error:', error);
     res.status(500).json({
       success: false,
-      message: '服务器内部错误'
+      message: 'Internal server error'
     });
   }
 });

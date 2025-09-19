@@ -4,7 +4,7 @@ const User = require('../models/User');
 const Favorite = require('../models/Favorite');
 const Message = require('../models/Message');
 
-// 连接数据库
+// Connect to database
 const connectDB = async () => {
   try {
     await mongoose.connect('mongodb://localhost:27017/campus_marketplace');
@@ -15,10 +15,10 @@ const connectDB = async () => {
   }
 };
 
-// 生成唯一ID
+// Generate unique ID
 const uid = () => Math.random().toString(36).slice(2, 10);
 
-// 种子数据
+// Seed data
 const seedUsers = [
   {
     _id: new mongoose.Types.ObjectId(),
@@ -137,13 +137,13 @@ const seedListings = [
 const seedFavorites = [
   {
     user: seedUsers[4]._id, // Me
-    listing: null // 将在运行时设置
+    listing: null // Will be set at runtime
   }
 ];
 
 const seedMessages = [
   {
-    listing: null, // 将在运行时设置
+    listing: null, // Will be set at runtime
     sender: seedUsers[4]._id, // Me
     receiver: seedUsers[0]._id, // Alice
     content: "Hi, is the iPad still available?",
@@ -151,7 +151,7 @@ const seedMessages = [
     createdAt: new Date(Date.now() - 2 * 3600 * 1000)
   },
   {
-    listing: null, // 将在运行时设置
+    listing: null, // Will be set at runtime
     sender: seedUsers[0]._id, // Alice
     receiver: seedUsers[4]._id, // Me
     content: "Yes, it's still available! When would you like to meet?",
@@ -159,7 +159,7 @@ const seedMessages = [
     createdAt: new Date(Date.now() - 1.5 * 3600 * 1000)
   },
   {
-    listing: null, // 将在运行时设置
+    listing: null, // Will be set at runtime
     sender: seedUsers[4]._id, // Me
     receiver: seedUsers[0]._id, // Alice
     content: "How about tomorrow afternoon?",
@@ -170,42 +170,42 @@ const seedMessages = [
 
 const seedDatabase = async () => {
   try {
-    console.log('开始清理数据库...');
+    console.log('Starting database cleanup...');
     
-    // 清理现有数据
+    // Clean existing data
     await User.deleteMany({});
     await Listing.deleteMany({});
     await Favorite.deleteMany({});
     await Message.deleteMany({});
     
-    console.log('开始插入用户数据...');
+    console.log('Starting to insert user data...');
     const users = await User.insertMany(seedUsers);
-    console.log(`插入了 ${users.length} 个用户`);
+    console.log(`Inserted ${users.length} users`);
     
-    console.log('开始插入商品数据...');
+    console.log('Starting to insert product data...');
     const listings = await Listing.insertMany(seedListings);
-    console.log(`插入了 ${listings.length} 个商品`);
+    console.log(`Inserted ${listings.length} products`);
     
-    console.log('开始插入收藏数据...');
-    // 为第一个商品添加收藏
+    console.log('Starting to insert favorite data...');
+    // Add favorite for first product
     const favorite = new Favorite({
       user: seedUsers[4]._id,
       listing: listings[0]._id
     });
     await favorite.save();
-    console.log('插入了收藏数据');
+    console.log('Inserted favorite data');
     
-    console.log('开始插入消息数据...');
-    // 为第一个商品添加消息
+    console.log('Starting to insert message data...');
+    // Add messages for first product
     const messages = seedMessages.map(msg => ({
       ...msg,
       listing: listings[0]._id
     }));
     await Message.insertMany(messages);
-    console.log(`插入了 ${messages.length} 条消息`);
+    console.log(`Inserted ${messages.length} messages`);
     
-    console.log('数据库种子数据插入完成！');
-    console.log('\n测试用户账号:');
+    console.log('Database seed data insertion completed!');
+    console.log('\nTest user accounts:');
     console.log('Alice: alice@example.com / password123');
     console.log('Ben: ben@example.com / password123');
     console.log('Cara: cara@example.com / password123');
@@ -213,13 +213,13 @@ const seedDatabase = async () => {
     console.log('Me: me@example.com / password123');
     
   } catch (error) {
-    console.error('种子数据插入错误:', error);
+    console.error('Seed data insertion error:', error);
   } finally {
     mongoose.connection.close();
   }
 };
 
-// 运行种子脚本
+// Run seed script
 const runSeed = async () => {
   await connectDB();
   await seedDatabase();

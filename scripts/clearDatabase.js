@@ -4,7 +4,7 @@ const User = require('../models/User');
 const Favorite = require('../models/Favorite');
 const Message = require('../models/Message');
 
-// 连接数据库
+// Connect to database
 const connectDB = async () => {
   try {
     await mongoose.connect('mongodb://localhost:27017/campus_marketplace');
@@ -15,34 +15,34 @@ const connectDB = async () => {
   }
 };
 
-// 清除所有数据
+// Clear all data
 const clearDatabase = async () => {
   try {
-    console.log('开始清除数据库...');
+    console.log('Starting database cleanup...');
     
-    // 清除所有集合的数据
+    // Clear all collection data
     await User.deleteMany({});
-    console.log('✅ 用户数据已清除');
+    console.log('✅ User data cleared');
     
     await Listing.deleteMany({});
-    console.log('✅ 商品数据已清除');
+    console.log('✅ Product data cleared');
     
     await Favorite.deleteMany({});
-    console.log('✅ 收藏数据已清除');
+    console.log('✅ Favorite data cleared');
     
     await Message.deleteMany({});
-    console.log('✅ 消息数据已清除');
+    console.log('✅ Message data cleared');
     
-    console.log('🎉 数据库清除完成！');
+    console.log('🎉 Database cleanup completed!');
     
   } catch (error) {
-    console.error('清除数据库错误:', error);
+    console.error('Database cleanup error:', error);
   } finally {
     mongoose.connection.close();
   }
 };
 
-// 运行清除脚本
+// Run cleanup script
 const runClear = async () => {
   await connectDB();
   await clearDatabase();

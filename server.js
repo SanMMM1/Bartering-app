@@ -6,50 +6,50 @@ require('dotenv').config();
 
 const connectDB = require('./config/database');
 
-// 导入路由
+// Import routes
 const listingRoutes = require('./routes/listings');
 const authRoutes = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// 连接数据库
+// Connect to database
 connectDB();
 
-// 安全中间件
+// Security middleware
 app.use(helmet());
 
-// CORS配置 - 开发环境允许所有来源
+// CORS configuration - allow all origins in development
 app.use(cors({
-  origin: true, // 开发环境允许所有来源
+  origin: true, // Allow all origins in development
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// 请求限制
+// Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15分钟
-  max: 100, // 限制每个IP 15分钟内最多100个请求
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per 15 minutes
   message: {
     success: false,
-    message: '请求过于频繁，请稍后再试'
+    message: 'Too many requests, please try again later'
   }
 });
 app.use('/api/', limiter);
 
-// 解析JSON请求体
+// Parse JSON request body
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// 静态文件服务
+// Static file serving
 app.use('/uploads', express.static('uploads'));
 
-// API路由
+// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/listings', listingRoutes);
 
-// 健康检查端点
+// Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
@@ -59,39 +59,39 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// 404处理
+// 404 handling
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
-    message: 'API端点不存在'
+    message: 'API endpoint not found'
   });
 });
 
-// 全局错误处理
+// Global error handling
 app.use((error, req, res, next) => {
-  console.error('服务器错误:', error);
+  console.error('Server error:', error);
   
   res.status(error.status || 500).json({
     success: false,
-    message: error.message || '服务器内部错误',
+    message: error.message || 'Internal server error',
     ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
   });
 });
 
-// 启动服务器
+// Start server
 app.listen(PORT, () => {
-  console.log(`🚀 服务器运行在端口 ${PORT}`);
-  console.log(`📊 API文档: http://localhost:${PORT}/api/health`);
-  console.log(`🌍 环境: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📊 API Documentation: http://localhost:${PORT}/api/health`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
-// 优雅关闭
+// Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('收到SIGTERM信号，正在关闭服务器...');
+  console.log('Received SIGTERM signal, shutting down server...');
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
-  console.log('收到SIGINT信号，正在关闭服务器...');
+  console.log('Received SIGINT signal, shutting down server...');
   process.exit(0);
 });

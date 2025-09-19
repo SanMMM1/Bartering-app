@@ -18,9 +18,9 @@ const messageSchema = new mongoose.Schema({
   },
   content: {
     type: String,
-    required: [true, '消息内容不能为空'],
+    required: [true, 'Message content is required'],
     trim: true,
-    maxlength: [500, '消息不能超过500个字符']
+    maxlength: [500, 'Message cannot exceed 500 characters']
   },
   isRead: {
     type: Boolean,
@@ -34,7 +34,7 @@ const messageSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// 创建索引
+// Create indexes
 messageSchema.index({ listing: 1, createdAt: -1 });
 messageSchema.index({ sender: 1, receiver: 1 });
 messageSchema.index({ isRead: 1 });

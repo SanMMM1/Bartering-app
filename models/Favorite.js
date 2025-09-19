@@ -19,7 +19,7 @@ const favoriteSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// 确保用户和商品的组合唯一
+// Ensure unique combination of user and listing
 favoriteSchema.index({ user: 1, listing: 1 }, { unique: true });
 
 module.exports = mongoose.model('Favorite', favoriteSchema);

@@ -69,10 +69,10 @@
   
 const { useEffect, useMemo, useRef, useState, useCallback } = React;
 
-// API配置
+// API Configuration
 const API_BASE_URL = 'http://localhost:3001/api';
 
-// 工具函数
+// Utility functions
 const uid = () => Math.random().toString(36).slice(2, 10);
 const now = () => new Date().toISOString();
 const timeAgo = (iso) => {
@@ -88,26 +88,26 @@ const timeAgo = (iso) => {
 };
 const fmtPrice = (n) => (Number(n) || 0).toLocaleString(undefined, { style: "currency", currency: "USD" });
 
-// 常量定义
+// Constants
 const CATEGORIES = ["Electronics","Appliances","Furniture","Clothing","Books","Sports","Beauty & Personal Care","Tickets","Other"];
 const CONDITIONS = ["Brand New","Like New","Good","Fair"];
 const LOCATIONS = ["Cleveland","Columbus","Pittsburgh","Beijing","Shanghai","Guangzhou","Shunyi"];
 
-// 本地存储配置（仅用于用户偏好和收藏）
+// Local storage configuration (for user preferences and favorites only)
 const LS = { favorites:"campus_xianyu_favs", messages:"campus_xianyu_msgs", user:"campus_xianyu_user" };
 const load = (k,f)=>{ try{ const v = JSON.parse(localStorage.getItem(k)); return v ?? f; }catch{ return f; } };
 const save = (k,v)=> localStorage.setItem(k, JSON.stringify(v));
 
-// 获取存储的Token
+// Get stored token
 const getToken = () => localStorage.getItem('auth_token');
 
-// 设置Token
+// Set token
 const setToken = (token) => localStorage.setItem('auth_token', token);
 
-// 清除Token
+// Clear token
 const clearToken = () => localStorage.removeItem('auth_token');
 
-// API调用函数
+// API call function
 const apiCall = async (url, options = {}) => {
   try {
     const token = getToken();
@@ -116,7 +116,7 @@ const apiCall = async (url, options = {}) => {
       ...options.headers
     };
     
-    // 如果有token，添加到请求头
+    // If token exists, add to request headers
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -127,7 +127,7 @@ const apiCall = async (url, options = {}) => {
     });
     
     if (!response.ok) {
-      // 如果是401错误，清除token并重定向到登录
+      // If 401 error, clear token and redirect to login
       if (response.status === 401) {
         clearToken();
         window.location.reload();
@@ -138,14 +138,14 @@ const apiCall = async (url, options = {}) => {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('API调用错误:', error);
+    console.error('API call error:', error);
     throw error;
   }
 };
 
-// 认证相关API
+// Authentication related API
 const authAPI = {
-  // 用户注册
+  // User registration
   register: async (userData) => {
     return await apiCall('/auth/register', {
       method: 'POST',
@@ -153,7 +153,7 @@ const authAPI = {
     });
   },
   
-  // 用户登录
+  // User login
   login: async (credentials) => {
     return await apiCall('/auth/login', {
       method: 'POST',
@@ -161,12 +161,12 @@ const authAPI = {
     });
   },
   
-  // 获取当前用户信息
+  // Get current user info
   getMe: async () => {
     return await apiCall('/auth/me');
   },
   
-  // 更新用户资料
+  // Update user profile
   updateProfile: async (profileData) => {
     return await apiCall('/auth/profile', {
       method: 'PUT',
@@ -174,7 +174,7 @@ const authAPI = {
     });
   },
   
-  // 修改密码
+  // Change password
   changePassword: async (passwordData) => {
     return await apiCall('/auth/password', {
       method: 'PUT',
@@ -182,21 +182,21 @@ const authAPI = {
     });
   },
   
-  // 用户登出
+  // User logout
   logout: async () => {
     return await apiCall('/auth/logout', {
       method: 'POST'
     });
   },
   
-  // 重新发送验证邮件
+  // Resend verification email
   resendVerification: async () => {
     return await apiCall('/auth/resend-verification', {
       method: 'POST'
     });
   },
   
-  // 请求密码重置
+  // Request password reset
   forgotPassword: async (email) => {
     return await apiCall('/auth/forgot-password', {
       method: 'POST',
@@ -204,7 +204,7 @@ const authAPI = {
     });
   },
   
-  // 重置密码
+  // Reset password
   resetPassword: async (token, newPassword) => {
     return await apiCall('/auth/reset-password', {
       method: 'POST',
@@ -213,20 +213,20 @@ const authAPI = {
   }
 };
 
-// 商品相关API
+// Product related API
 const listingsAPI = {
-  // 获取商品列表
+  // Get product list
   getAll: async (params = {}) => {
     const queryString = new URLSearchParams(params).toString();
     return await apiCall(`/listings${queryString ? '?' + queryString : ''}`);
   },
   
-  // 获取单个商品
+  // Get single product
   getById: async (id) => {
     return await apiCall(`/listings/${id}`);
   },
   
-  // 创建商品
+  // Create product
   create: async (listing) => {
     return await apiCall('/listings', {
       method: 'POST',
@@ -234,7 +234,7 @@ const listingsAPI = {
     });
   },
   
-  // 更新商品
+  // Update product
   update: async (id, listing) => {
     return await apiCall(`/listings/${id}`, {
       method: 'PUT',
@@ -242,14 +242,14 @@ const listingsAPI = {
     });
   },
   
-  // 删除商品
+  // Delete product
   delete: async (id) => {
     return await apiCall(`/listings/${id}`, {
       method: 'DELETE'
     });
   },
   
-  // 标记售出状态
+  // Mark sold status
   markSold: async (id, sold) => {
     return await apiCall(`/listings/${id}/sold`, {
       method: 'PATCH',
@@ -257,7 +257,7 @@ const listingsAPI = {
     });
   },
   
-  // 获取用户商品
+  // Get user products
   getByUser: async (userId, sold = null) => {
     const params = sold !== null ? { sold } : {};
     const queryString = new URLSearchParams(params).toString();
@@ -280,12 +280,12 @@ function App(){
   const [showVerification, setShowVerification] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   
-  // 保存用户偏好到localStorage
+  // Save user preferences to localStorage
   useEffect(()=>save(LS.favorites, favorites),[favorites]);
   useEffect(()=>save(LS.messages, messages),[messages]);
   useEffect(()=>save(LS.user, user),[user]);
   
-  // 检查用户认证状态
+  // Check user authentication status
   const checkAuth = useCallback(async () => {
     const token = getToken();
     if (token) {
@@ -298,13 +298,13 @@ function App(){
           clearToken();
         }
       } catch (error) {
-        console.error('认证检查失败:', error);
+        console.error('Authentication check failed:', error);
         clearToken();
       }
     }
   }, []);
   
-  // 用户登录
+  // User login
   const handleLogin = async (credentials) => {
     try {
       const response = await authAPI.login(credentials);
@@ -315,15 +315,15 @@ function App(){
         setShowLogin(false);
         setError(null);
       } else {
-        setError(response.message || '登录失败');
+        setError(response.message || 'Login failed');
       }
     } catch (error) {
-      console.error('登录失败:', error);
-      setError('登录失败，请重试');
+      console.error('Login failed:', error);
+      setError('Login failed, please try again');
     }
   };
   
-  // 用户注册
+  // User registration
   const handleRegister = async (userData) => {
     try {
       const response = await authAPI.register(userData);
@@ -334,25 +334,25 @@ function App(){
         setShowRegister(false);
         setError(null);
         
-        // 如果邮箱验证邮件发送成功，显示验证提示
+        // If email verification sent successfully, show verification prompt
         if (response.data.emailSent) {
           setShowVerification(true);
         }
       } else {
-        setError(response.message || '注册失败');
+        setError(response.message || 'Registration failed');
       }
     } catch (error) {
-      console.error('注册失败:', error);
-      setError('注册失败，请重试');
+      console.error('Registration failed:', error);
+      setError('Registration failed, please try again');
     }
   };
   
-  // 用户登出
+  // User logout
   const handleLogout = async () => {
     try {
       await authAPI.logout();
     } catch (error) {
-      console.error('登出失败:', error);
+      console.error('Logout failed:', error);
     } finally {
       clearToken();
       setUser(null);
@@ -361,45 +361,45 @@ function App(){
     }
   };
   
-  // 重新发送验证邮件
+  // Resend verification email
   const handleResendVerification = async () => {
     try {
       const response = await authAPI.resendVerification();
       if (response.success) {
         setError(null);
-        alert('验证邮件已重新发送，请查收您的邮箱');
+        alert('Verification email resent, please check your email');
       } else {
-        setError(response.message || '重新发送失败');
+        setError(response.message || 'Resend failed');
       }
     } catch (error) {
-      console.error('重新发送验证邮件失败:', error);
-      setError('重新发送失败，请重试');
+      console.error('Failed to resend verification email:', error);
+      setError('Resend failed, please try again');
     }
   };
   
-  // 请求密码重置
+  // Request password reset
   const handleForgotPassword = async (email) => {
     try {
       const response = await authAPI.forgotPassword(email);
       if (response.success) {
         setError(null);
-        alert('密码重置邮件已发送，请查收您的邮箱');
+        alert('Password reset email sent, please check your email');
         setShowForgotPassword(false);
       } else {
-        setError(response.message || '发送失败');
+        setError(response.message || 'Send failed');
       }
     } catch (error) {
-      console.error('请求密码重置失败:', error);
-      setError('发送失败，请重试');
+      console.error('Password reset request failed:', error);
+      setError('Send failed, please try again');
     }
   };
   
-  // 初始检查认证状态
+  // Initial authentication check
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
   
-  // 从API加载商品数据
+  // Load product data from API
   const loadListings = useCallback(async (params = {}) => {
     setLoading(true);
     setError(null);
@@ -408,21 +408,21 @@ function App(){
       if (response.success) {
         setListings(response.data);
       } else {
-        setError('加载商品数据失败');
+        setError('Failed to load product data');
       }
     } catch (err) {
-      console.error('加载商品失败:', err);
-      setError('无法连接到服务器，请检查后端是否运行');
+      console.error('Failed to load products:', err);
+      setError('Cannot connect to server, please check if backend is running');
     } finally {
       setLoading(false);
     }
   }, []);
   
-  // 初始加载数据
+  // Initial data loading
   useEffect(() => {
     loadListings();
   }, [loadListings]);
-  // 构建API查询参数
+  // Build API query parameters
   const apiParams = useMemo(() => {
     const params = {};
     if (cat !== "All") params.category = cat;
@@ -432,7 +432,7 @@ function App(){
     if (maxp) params.maxPrice = maxp;
     if (q.trim()) params.search = q.trim();
     
-    // 排序参数
+    // Sort parameters
     if (sort === "Price ↑") {
       params.sort = "price";
       params.order = "asc";
@@ -447,7 +447,7 @@ function App(){
     return params;
   }, [cat, cond, loc, minp, maxp, q, sort]);
 
-  // 加载用户商品
+  // Load user products
   const loadUserListings = useCallback(async () => {
     if (!user?.id) return;
     
@@ -458,17 +458,17 @@ function App(){
       if (response.success) {
         setListings(response.data);
       } else {
-        setError('加载用户商品失败');
+        setError('Failed to load user products');
       }
     } catch (err) {
-      console.error('加载用户商品失败:', err);
-      setError('无法连接到服务器');
+      console.error('Failed to load user products:', err);
+      setError('Cannot connect to server');
     } finally {
       setLoading(false);
     }
   }, [user?.id]);
 
-  // 当筛选条件改变时重新加载数据
+  // Reload data when filter conditions change
   useEffect(() => {
     if (tab === "explore") {
       loadListings(apiParams);
@@ -478,7 +478,7 @@ function App(){
   }, [apiParams, tab, loadListings, loadUserListings]);
 
 
-  // 客户端筛选数据（用于收藏和搜索）
+  // Client-side data filtering (for favorites and search)
   const data = useMemo(() => {
     let d = [...listings];
     
@@ -486,7 +486,7 @@ function App(){
       d = d.filter(it => favorites[it._id || it.id]);
     }
     
-    // 如果API不支持搜索，则进行客户端搜索
+    // If API doesn't support search, perform client-side search
     if (q.trim() && !apiParams.search) {
       const key = q.trim().toLowerCase();
       d = d.filter(it => 
@@ -500,7 +500,7 @@ function App(){
   
   const handlePost = async (item) => {
     if (!user?.id) {
-      setError('请先登录');
+      setError('Please login first');
       return;
     }
     
@@ -516,20 +516,20 @@ function App(){
       
       const response = await listingsAPI.create(newItem);
       if (response.success) {
-        // 重新加载数据
+        // Reload data
         if (tab === "mine") {
           loadUserListings();
         } else {
-          loadListings(); // 重新加载所有商品
+          loadListings(); // Reload all products
         }
         setPosting(false);
         setTab("mine");
       } else {
-        setError('发布商品失败');
+        setError('Failed to post product');
       }
     } catch (err) {
-      console.error('发布商品失败:', err);
-      setError('发布商品失败，请重试');
+      console.error('Failed to post product:', err);
+      setError('Failed to post product, please try again');
     }
   };
   
@@ -537,14 +537,14 @@ function App(){
     try {
       const response = await listingsAPI.markSold(id, sold);
       if (response.success) {
-        // 更新本地状态
+        // Update local state
         setListings(arr => arr.map(it => (it._id || it.id) === id ? {...it, sold} : it));
       } else {
-        setError('更新商品状态失败');
+        setError('Failed to update product status');
       }
     } catch (err) {
-      console.error('更新商品状态失败:', err);
-      setError('更新商品状态失败，请重试');
+      console.error('Failed to update product status:', err);
+      setError('Failed to update product status, please try again');
     }
   };
   
@@ -552,24 +552,24 @@ function App(){
     try {
       const response = await listingsAPI.delete(id);
       if (response.success) {
-        // 重新加载数据
+        // Reload data
         if (tab === "mine") {
           loadUserListings();
         } else {
-          loadListings(); // 重新加载所有商品
+          loadListings(); // Reload all products
         }
       } else {
-        setError('删除商品失败');
+        setError('Failed to delete product');
       }
     } catch (err) {
-      console.error('删除商品失败:', err);
-      setError('删除商品失败，请重试');
+      console.error('Failed to delete product:', err);
+      setError('Failed to delete product, please try again');
     }
   };
   const sendMsg = (listingId,text)=>{
     if(!text.trim()) return;
     if (!user?.id) {
-      setError('请先登录');
+      setError('Please login first');
       return;
     }
     setMessages(m=>{ 
@@ -622,9 +622,9 @@ function App(){
           <button className={tab==='explore'?'on':''} onClick={()=>setTab('explore')}>Explore</button>
           {isAuthenticated && (
             <>
-              <button className={tab==='favorites'?'on':''} onClick={()=>setTab('favorites')}>Favorites</button>
-              <button className={tab==='mine'?'on':''} onClick={()=>setTab('mine')}>My Items</button>
-              <button className="primary" onClick={()=>{if(user?.id) setPosting(true); else setError('请先登录');}}>＋ Post</button>
+          <button className={tab==='favorites'?'on':''} onClick={()=>setTab('favorites')}>Favorites</button>
+          <button className={tab==='mine'?'on':''} onClick={()=>setTab('mine')}>My Items</button>
+              <button className="primary" onClick={()=>{if(user?.id) setPosting(true); else setError('Please login first');}}>＋ Post</button>
             </>
           )}
           {!isAuthenticated ? (
@@ -637,7 +637,7 @@ function App(){
               <span style={{fontSize: '14px'}}>Hi, {user?.name}</span>
               {!user?.isVerified && (
                 <button onClick={handleResendVerification} style={{fontSize: '12px', padding: '4px 8px'}}>
-                  验证邮箱
+                  Verify Email
                 </button>
               )}
               <button onClick={handleLogout}>Logout</button>
@@ -647,7 +647,7 @@ function App(){
       </div>
       {error && (
         <div style={{background: '#ff6b6b', color: 'white', padding: '8px', textAlign: 'center', fontSize: '14px'}}>
-          ⚠️ {error} - 请确保后端服务器正在运行 (http://localhost:3001)
+          ⚠️ {error} - Please ensure backend server is running (http://localhost:3001)
         </div>
       )}
       <div className="filters">
@@ -660,13 +660,13 @@ function App(){
       </div>
       <div className="grid">
         {loading ? (
-          <div className="empty">加载中...</div>
+          <div className="empty">Loading...</div>
         ) : error ? (
           <div className="empty" style={{color: '#ff6b6b'}}>
             {error}
             <br/>
             <button onClick={() => window.location.reload()} style={{marginTop: '10px', padding: '8px 16px', background: '#97f3d2', color: '#0a0f1d', border: 'none', borderRadius: '8px', cursor: 'pointer'}}>
-              重新加载
+              Reload
             </button>
           </div>
         ) : data.length === 0 ? (
@@ -699,7 +699,7 @@ function PostModal({ onClose, onPost }){
       category, 
       condition, 
       location, 
-      description: desc, // 使用description字段名
+      description: desc, // Use description field name
       images: images.length ? images : ["https://images.unsplash.com/photo-1555041469-a586c61ea9bc?q=80&w=1200&auto=format&fit=crop"] 
     }); 
   };
@@ -756,7 +756,7 @@ function ChatDrawer({ item, onClose, messages, onSend, user }){
     </div>
   );
 }
-// 登录模态框组件
+// Login modal component
 function LoginModal({ onClose, onLogin, onSwitchToRegister, onForgotPassword }) {
   const { useState } = React;
   const [email, setEmail] = useState("");
@@ -765,7 +765,7 @@ function LoginModal({ onClose, onLogin, onSwitchToRegister, onForgotPassword }) 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password) return alert("请填写邮箱和密码");
+    if (!email || !password) return alert("Please enter email and password");
     
     setLoading(true);
     try {
@@ -779,38 +779,38 @@ function LoginModal({ onClose, onLogin, onSwitchToRegister, onForgotPassword }) 
     <div className="modal">
       <div className="panel">
         <div className="panel-top">
-          <div className="panel-title">登录</div>
+          <div className="panel-title">Login</div>
           <button onClick={onClose}>×</button>
         </div>
         <div className="panel-body">
           <form onSubmit={handleSubmit} className="form">
             <div className="field">
-              <label>邮箱</label>
+              <label>Email</label>
               <input 
                 type="email" 
                 value={email} 
                 onChange={e => setEmail(e.target.value)} 
-                placeholder="请输入邮箱地址"
+                placeholder="Please enter email address"
                 required
               />
             </div>
             <div className="field">
-              <label>密码</label>
+              <label>Password</label>
               <input 
                 type="password" 
                 value={password} 
                 onChange={e => setPassword(e.target.value)} 
-                placeholder="请输入密码"
+                placeholder="Please enter password"
                 required
               />
             </div>
             <div className="panel-bottom">
               <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%'}}>
-                <button type="button" onClick={onSwitchToRegister}>注册新账号</button>
-                <button type="button" onClick={onForgotPassword} style={{fontSize: '12px', color: '#666'}}>忘记密码？</button>
+                <button type="button" onClick={onSwitchToRegister}>Register new account</button>
+                <button type="button" onClick={onForgotPassword} style={{fontSize: '12px', color: '#666'}}>Forgot password?</button>
               </div>
               <button type="submit" className="primary" disabled={loading}>
-                {loading ? "登录中..." : "登录"}
+                {loading ? "Logging in..." : "Login"}
               </button>
             </div>
           </form>
@@ -820,7 +820,7 @@ function LoginModal({ onClose, onLogin, onSwitchToRegister, onForgotPassword }) 
   );
 }
 
-// 注册模态框组件
+// Registration modal component
 function RegisterModal({ onClose, onRegister, onSwitchToLogin }) {
   const { useState } = React;
   const [formData, setFormData] = useState({
@@ -840,21 +840,21 @@ function RegisterModal({ onClose, onRegister, onSwitchToLogin }) {
     e.preventDefault();
     
     if (!formData.email || !formData.password || !formData.name) {
-      return alert("请填写必填字段");
+      return alert("Please fill in required fields");
     }
     
     if (formData.password !== formData.confirmPassword) {
-      return alert("两次输入的密码不一致");
+      return alert("Passwords do not match");
     }
     
     if (formData.password.length < 6) {
-      return alert("密码至少6个字符");
+      return alert("Password must be at least 6 characters");
     }
     
     setLoading(true);
     try {
       const { confirmPassword, ...userData } = formData;
-      // 过滤掉空的手机号
+      // Filter out empty phone numbers
       if (!userData.phone || userData.phone.trim() === '') {
         delete userData.phone;
       }
@@ -868,64 +868,64 @@ function RegisterModal({ onClose, onRegister, onSwitchToLogin }) {
     <div className="modal">
       <div className="panel">
         <div className="panel-top">
-          <div className="panel-title">注册</div>
+          <div className="panel-title">Register</div>
           <button onClick={onClose}>×</button>
         </div>
         <div className="panel-body">
           <form onSubmit={handleSubmit} className="form">
             <div className="field">
-              <label>邮箱 *</label>
+              <label>Email *</label>
               <input 
                 type="email" 
                 value={formData.email} 
                 onChange={e => handleChange('email', e.target.value)} 
-                placeholder="请输入邮箱地址"
+                placeholder="Please enter email address"
                 required
               />
             </div>
             <div className="field">
-              <label>用户名 *</label>
+              <label>Username *</label>
               <input 
                 type="text" 
                 value={formData.name} 
                 onChange={e => handleChange('name', e.target.value)} 
-                placeholder="请输入用户名"
+                placeholder="Please enter username"
                 required
               />
             </div>
             <div className="field">
-              <label>手机号</label>
+              <label>Phone</label>
               <input 
                 type="tel" 
                 value={formData.phone} 
                 onChange={e => handleChange('phone', e.target.value)} 
-                placeholder="请输入手机号（可选）"
+                placeholder="Please enter phone number (optional)"
               />
             </div>
             <div className="field">
-              <label>密码 *</label>
+              <label>Password *</label>
               <input 
                 type="password" 
                 value={formData.password} 
                 onChange={e => handleChange('password', e.target.value)} 
-                placeholder="请输入密码（至少6个字符）"
+                placeholder="Please enter password (at least 6 characters)"
                 required
               />
             </div>
             <div className="field">
-              <label>确认密码 *</label>
+              <label>Confirm Password *</label>
               <input 
                 type="password" 
                 value={formData.confirmPassword} 
                 onChange={e => handleChange('confirmPassword', e.target.value)} 
-                placeholder="请再次输入密码"
+                placeholder="Please enter password again"
                 required
               />
             </div>
             <div className="panel-bottom">
-              <button type="button" onClick={onSwitchToLogin}>已有账号？登录</button>
+              <button type="button" onClick={onSwitchToLogin}>Have an account? Login</button>
               <button type="submit" className="primary" disabled={loading}>
-                {loading ? "注册中..." : "注册"}
+                {loading ? "Registering..." : "Register"}
               </button>
             </div>
           </form>
@@ -935,7 +935,7 @@ function RegisterModal({ onClose, onRegister, onSwitchToLogin }) {
   );
 }
 
-// 邮箱验证模态框组件
+// Email verification modal component
 function VerificationModal({ onClose, user, onResend }) {
   const { useState } = React;
   const [loading, setLoading] = useState(false);
@@ -953,33 +953,33 @@ function VerificationModal({ onClose, user, onResend }) {
     <div className="modal">
       <div className="panel">
         <div className="panel-top">
-          <div className="panel-title">📧 邮箱验证</div>
+          <div className="panel-title">📧 Email Verification</div>
           <button onClick={onClose}>×</button>
         </div>
         <div className="panel-body">
           <div style={{textAlign: 'center', padding: '20px'}}>
             <div style={{fontSize: '48px', marginBottom: '20px'}}>📬</div>
-            <h3 style={{color: '#333', marginBottom: '15px'}}>验证邮件已发送</h3>
+            <h3 style={{color: '#333', marginBottom: '15px'}}>Verification email sent</h3>
             <p style={{color: '#666', lineHeight: '1.6', marginBottom: '20px'}}>
-              我们已向 <strong>{user?.email}</strong> 发送了一封验证邮件。
-              <br/>请查收您的邮箱并点击验证链接完成注册。
+              We have sent a verification email to <strong>{user?.email}</strong>.
+              <br/>Please check your email and click the verification link to complete registration.
             </p>
             
             <div style={{background: '#e3f2fd', border: '1px solid #bbdefb', borderRadius: '5px', padding: '15px', margin: '20px 0'}}>
               <p style={{margin: '0', color: '#1976d2', fontSize: '14px'}}>
-                <strong>💡 提示：</strong><br/>
-                • 验证链接24小时内有效<br/>
-                • 如果没有收到邮件，请检查垃圾邮件文件夹<br/>
-                • 验证后即可正常使用平台所有功能
+                <strong>💡 Tips:</strong><br/>
+                • Verification link is valid for 24 hours<br/>
+                • If you don't receive the email, please check your spam folder<br/>
+                • After verification, you can use all platform features
               </p>
             </div>
             
             <div style={{display: 'flex', gap: '10px', justifyContent: 'center'}}>
               <button onClick={handleResend} disabled={loading} style={{fontSize: '14px'}}>
-                {loading ? "发送中..." : "重新发送"}
+                {loading ? "Sending..." : "Resend"}
               </button>
               <button onClick={onClose} className="primary">
-                我知道了
+                Got it
               </button>
             </div>
           </div>
@@ -989,7 +989,7 @@ function VerificationModal({ onClose, user, onResend }) {
   );
 }
 
-// 忘记密码模态框组件
+// Forgot password modal component
 function ForgotPasswordModal({ onClose, onSubmit, onSwitchToLogin }) {
   const { useState } = React;
   const [email, setEmail] = useState("");
@@ -997,7 +997,7 @@ function ForgotPasswordModal({ onClose, onSubmit, onSwitchToLogin }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email) return alert("请输入邮箱地址");
+    if (!email) return alert("Please enter email address");
     
     setLoading(true);
     try {
@@ -1011,7 +1011,7 @@ function ForgotPasswordModal({ onClose, onSubmit, onSwitchToLogin }) {
     <div className="modal">
       <div className="panel">
         <div className="panel-top">
-          <div className="panel-title">🔑 忘记密码</div>
+          <div className="panel-title">🔑 Forgot Password</div>
           <button onClick={onClose}>×</button>
         </div>
         <div className="panel-body">
@@ -1019,25 +1019,25 @@ function ForgotPasswordModal({ onClose, onSubmit, onSwitchToLogin }) {
             <div style={{textAlign: 'center', marginBottom: '20px'}}>
               <div style={{fontSize: '48px', marginBottom: '15px'}}>🔒</div>
               <p style={{color: '#666', lineHeight: '1.6'}}>
-                输入您的邮箱地址，我们将发送密码重置链接给您。
+                Enter your email address and we will send you a password reset link.
               </p>
             </div>
             
             <div className="field">
-              <label>邮箱地址</label>
+              <label>Email Address</label>
               <input 
                 type="email" 
                 value={email} 
                 onChange={e => setEmail(e.target.value)} 
-                placeholder="请输入注册时使用的邮箱"
+                placeholder="Please enter the email used for registration"
                 required
               />
             </div>
             
             <div className="panel-bottom">
-              <button type="button" onClick={onSwitchToLogin}>返回登录</button>
+              <button type="button" onClick={onSwitchToLogin}>Back to Login</button>
               <button type="submit" className="primary" disabled={loading}>
-                {loading ? "发送中..." : "发送重置链接"}
+                {loading ? "Sending..." : "Send Reset Link"}
               </button>
             </div>
           </form>

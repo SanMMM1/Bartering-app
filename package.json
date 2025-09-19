@@ -1,7 +1,7 @@
 {
   "name": "campus-marketplace-backend",
   "version": "1.0.0",
-  "description": "校园二手交易平台后端API",
+  "description": "Campus Marketplace Backend API",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

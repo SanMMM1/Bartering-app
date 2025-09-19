@@ -1,60 +1,60 @@
-# 📧 邮箱验证功能配置指南
+# 📧 Email Verification Setup Guide
 
-## 概述
+## Overview
 
-校园二手交易平台已集成完整的邮箱验证功能，包括：
-- ✅ 用户注册时自动发送验证邮件
-- ✅ 邮箱验证链接验证
-- ✅ 重新发送验证邮件
-- ✅ 忘记密码邮件重置
-- ✅ 美观的HTML邮件模板
+Campus Marketplace has integrated complete email verification functionality, including:
+- ✅ Automatic verification email on user registration
+- ✅ Email verification link validation
+- ✅ Resend verification email
+- ✅ Forgot password email reset
+- ✅ Beautiful HTML email templates
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 1. 创建环境配置文件
+### 1. Create Environment Configuration File
 
-复制 `env.example` 文件为 `.env`：
+Copy `env.example` file to `.env`:
 
 ```bash
 cp env.example .env
 ```
 
-### 2. 配置邮件服务
+### 2. Configure Email Service
 
-编辑 `.env` 文件，配置您的邮件服务：
+Edit `.env` file and configure your email service:
 
 ```env
-# 邮件服务配置
+# Email service configuration
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-app-password
 ```
 
-### 3. 启动服务器
+### 3. Start Server
 
 ```bash
 npm start
 ```
 
-### 4. 测试邮件功能
+### 4. Test Email Functionality
 
-打开 `test-email-verification.html` 进行功能测试。
+Open `test-email-verification.html` to test functionality.
 
-## 📮 邮件服务配置
+## 📮 Email Service Configuration
 
-### Gmail 配置
+### Gmail Configuration
 
-1. **启用两步验证**
-   - 访问 [Google 账户安全设置](https://myaccount.google.com/security)
-   - 启用两步验证
+1. **Enable Two-Factor Authentication**
+   - Visit [Google Account Security Settings](https://myaccount.google.com/security)
+   - Enable two-factor authentication
 
-2. **生成应用专用密码**
-   - 在安全设置中找到"应用专用密码"
-   - 生成新密码（16位字符）
-   - 使用此密码作为 `SMTP_PASS`
+2. **Generate App-Specific Password**
+   - Find "App passwords" in security settings
+   - Generate new password (16 characters)
+   - Use this password as `SMTP_PASS`
 
-3. **配置示例**
+3. **Configuration Example**
    ```env
    SMTP_HOST=smtp.gmail.com
    SMTP_PORT=587
@@ -62,7 +62,7 @@ npm start
    SMTP_PASS=your-16-character-app-password
    ```
 
-### Outlook/Hotmail 配置
+### Outlook/Hotmail Configuration
 
 ```env
 SMTP_HOST=smtp-mail.outlook.com
@@ -71,7 +71,7 @@ SMTP_USER=your-email@outlook.com
 SMTP_PASS=your-password
 ```
 
-### Yahoo 配置
+### Yahoo Configuration
 
 ```env
 SMTP_HOST=smtp.mail.yahoo.com
@@ -80,7 +80,7 @@ SMTP_USER=your-email@yahoo.com
 SMTP_PASS=your-app-password
 ```
 
-### 企业邮箱配置
+### Enterprise Email Configuration
 
 以腾讯企业邮箱为例：
 ```env

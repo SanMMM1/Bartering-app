@@ -1,57 +1,57 @@
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 
-// 邮件配置
+// Email configuration
 const emailConfig = {
-  // 使用Gmail SMTP服务（开发环境）
-  // 生产环境建议使用专业的邮件服务如SendGrid、Mailgun等
+  // Use Gmail SMTP service (development environment)
+  // Production environment should use professional email services like SendGrid, Mailgun, etc.
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: process.env.SMTP_PORT || 587,
   secure: false, // true for 465, false for other ports
   auth: {
     user: process.env.SMTP_USER || 'your-email@gmail.com',
-    pass: process.env.SMTP_PASS || 'your-app-password' // 使用应用专用密码
+    pass: process.env.SMTP_PASS || 'your-app-password' // Use app-specific password
   }
 };
 
-// 创建邮件传输器
+// Create email transporter
 const createTransporter = () => {
   return nodemailer.createTransporter(emailConfig);
 };
 
-// 生成邮箱验证Token
+// Generate email verification token
 const generateVerificationToken = () => {
   return crypto.randomBytes(32).toString('hex');
 };
 
-// 生成验证链接
+// Generate verification link
 const generateVerificationLink = (token) => {
   const baseUrl = process.env.BASE_URL || 'http://localhost:3001';
   return `${baseUrl}/api/auth/verify-email?token=${token}`;
 };
 
-// 发送邮箱验证邮件
+// Send email verification email
 const sendVerificationEmail = async (email, name, token) => {
   try {
     const transporter = createTransporter();
     const verificationLink = generateVerificationLink(token);
     
     const mailOptions = {
-      from: `"校园二手交易平台" <${emailConfig.auth.user}>`,
+      from: `"Campus Marketplace" <${emailConfig.auth.user}>`,
       to: email,
-      subject: '邮箱验证 - 校园二手交易平台',
+      subject: 'Email Verification - Campus Marketplace',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="margin: 0; font-size: 28px;">🎓 校园二手交易平台</h1>
-            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">欢迎加入我们的社区！</p>
+            <h1 style="margin: 0; font-size: 28px;">🎓 Campus Marketplace</h1>
+            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Welcome to our community!</p>
           </div>
           
           <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
             <h2 style="color: #333; margin-top: 0;">Hi ${name}，</h2>
             
             <p style="color: #666; line-height: 1.6; font-size: 16px;">
-              感谢您注册校园二手交易平台！为了确保您的账户安全，请点击下面的按钮验证您的邮箱地址：
+              Thank you for registering with Campus Marketplace! To ensure your account security, please click the button below to verify your email address:
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
@@ -65,82 +65,82 @@ const sendVerificationEmail = async (email, name, token) => {
                         font-size: 16px;
                         display: inline-block;
                         box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
-                ✅ 验证邮箱地址
+                ✅ Verify Email Address
               </a>
             </div>
             
             <p style="color: #666; line-height: 1.6; font-size: 14px;">
-              如果按钮无法点击，请复制以下链接到浏览器中打开：<br>
+              If the button doesn't work, please copy and paste the following link into your browser:<br>
               <a href="${verificationLink}" style="color: #667eea; word-break: break-all;">${verificationLink}</a>
             </p>
             
             <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 20px 0;">
               <p style="margin: 0; color: #856404; font-size: 14px;">
-                <strong>⚠️ 重要提示：</strong><br>
-                • 此验证链接24小时内有效<br>
-                • 如果这不是您的操作，请忽略此邮件<br>
-                • 验证后即可正常使用平台所有功能
+                <strong>⚠️ Important Notice:</strong><br>
+                • This verification link is valid for 24 hours<br>
+                • If this was not your action, please ignore this email<br>
+                • After verification, you can use all platform features
               </p>
             </div>
             
             <hr style="border: none; border-top: 1px solid #dee2e6; margin: 30px 0;">
             
             <p style="color: #999; font-size: 12px; text-align: center; margin: 0;">
-              此邮件由系统自动发送，请勿回复。<br>
-              如有问题，请联系客服：support@campus-marketplace.com
+              This email was sent automatically by the system, please do not reply.<br>
+              If you have any questions, please contact support: support@campus-marketplace.com
             </p>
           </div>
         </div>
       `,
       text: `
-        校园二手交易平台 - 邮箱验证
+        Campus Marketplace - Email Verification
         
         Hi ${name}，
         
-        感谢您注册校园二手交易平台！请点击以下链接验证您的邮箱地址：
+        Thank you for registering with Campus Marketplace! Please click the link below to verify your email address:
         
         ${verificationLink}
         
-        此验证链接24小时内有效。
+        This verification link is valid for 24 hours.
         
-        如果这不是您的操作，请忽略此邮件。
+        If this was not your action, please ignore this email.
         
-        此邮件由系统自动发送，请勿回复。
+        This email was sent automatically by the system, please do not reply.
       `
     };
 
     const result = await transporter.sendMail(mailOptions);
-    console.log('验证邮件发送成功:', result.messageId);
+    console.log('Verification email sent successfully:', result.messageId);
     return { success: true, messageId: result.messageId };
     
   } catch (error) {
-    console.error('发送验证邮件失败:', error);
+    console.error('Failed to send verification email:', error);
     return { success: false, error: error.message };
   }
 };
 
-// 发送密码重置邮件
+// Send password reset email
 const sendPasswordResetEmail = async (email, name, token) => {
   try {
     const transporter = createTransporter();
     const resetLink = `${process.env.BASE_URL || 'http://localhost:3001'}/api/auth/reset-password?token=${token}`;
     
     const mailOptions = {
-      from: `"校园二手交易平台" <${emailConfig.auth.user}>`,
+      from: `"Campus Marketplace" <${emailConfig.auth.user}>`,
       to: email,
-      subject: '密码重置 - 校园二手交易平台',
+      subject: 'Password Reset - Campus Marketplace',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="margin: 0; font-size: 28px;">🔒 密码重置</h1>
-            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">校园二手交易平台</p>
+            <h1 style="margin: 0; font-size: 28px;">🔒 Password Reset</h1>
+            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Campus Marketplace</p>
           </div>
           
           <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
             <h2 style="color: #333; margin-top: 0;">Hi ${name}，</h2>
             
             <p style="color: #666; line-height: 1.6; font-size: 16px;">
-              我们收到了您的密码重置请求。请点击下面的按钮重置您的密码：
+              We received your password reset request. Please click the button below to reset your password:
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
@@ -154,21 +154,21 @@ const sendPasswordResetEmail = async (email, name, token) => {
                         font-size: 16px;
                         display: inline-block;
                         box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);">
-                🔑 重置密码
+                🔑 Reset Password
               </a>
             </div>
             
             <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 20px 0;">
               <p style="margin: 0; color: #856404; font-size: 14px;">
-                <strong>⚠️ 安全提示：</strong><br>
-                • 此重置链接1小时内有效<br>
-                • 如果您没有请求重置密码，请忽略此邮件<br>
-                • 为保护账户安全，请勿将链接分享给他人
+                <strong>⚠️ Security Notice:</strong><br>
+                • This reset link is valid for 1 hour<br>
+                • If you did not request a password reset, please ignore this email<br>
+                • For account security, please do not share this link with others
               </p>
             </div>
             
             <p style="color: #999; font-size: 12px; text-align: center; margin: 30px 0 0 0;">
-              此邮件由系统自动发送，请勿回复。
+              This email was sent automatically by the system, please do not reply.
             </p>
           </div>
         </div>
@@ -176,24 +176,24 @@ const sendPasswordResetEmail = async (email, name, token) => {
     };
 
     const result = await transporter.sendMail(mailOptions);
-    console.log('密码重置邮件发送成功:', result.messageId);
+    console.log('Password reset email sent successfully:', result.messageId);
     return { success: true, messageId: result.messageId };
     
   } catch (error) {
-    console.error('发送密码重置邮件失败:', error);
+    console.error('Failed to send password reset email:', error);
     return { success: false, error: error.message };
   }
 };
 
-// 测试邮件配置
+// Test email configuration
 const testEmailConfig = async () => {
   try {
     const transporter = createTransporter();
     await transporter.verify();
-    console.log('✅ 邮件配置验证成功');
+    console.log('✅ Email configuration verified successfully');
     return { success: true };
   } catch (error) {
-    console.error('❌ 邮件配置验证失败:', error);
+    console.error('❌ Email configuration verification failed:', error);
     return { success: false, error: error.message };
   }
 };

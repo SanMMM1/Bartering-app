@@ -3,24 +3,24 @@ const mongoose = require('mongoose');
 const listingSchema = new mongoose.Schema({
   title: {
     type: String,
-    required: [true, '商品标题不能为空'],
+    required: [true, 'Product title is required'],
     trim: true,
-    maxlength: [100, '标题不能超过100个字符']
+    maxlength: [100, 'Title cannot exceed 100 characters']
   },
   description: {
     type: String,
-    required: [true, '商品描述不能为空'],
+    required: [true, 'Product description is required'],
     trim: true,
-    maxlength: [1000, '描述不能超过1000个字符']
+    maxlength: [1000, 'Description cannot exceed 1000 characters']
   },
   price: {
     type: Number,
-    required: [true, '价格不能为空'],
-    min: [0, '价格不能为负数']
+    required: [true, 'Price is required'],
+    min: [0, 'Price cannot be negative']
   },
   category: {
     type: String,
-    required: [true, '商品类别不能为空'],
+    required: [true, 'Product category is required'],
     enum: [
       'Electronics',
       'Appliances', 
@@ -35,12 +35,12 @@ const listingSchema = new mongoose.Schema({
   },
   condition: {
     type: String,
-    required: [true, '商品成色不能为空'],
+    required: [true, 'Product condition is required'],
     enum: ['Brand New', 'Like New', 'Good', 'Fair']
   },
   location: {
     type: String,
-    required: [true, '地点不能为空'],
+    required: [true, 'Location is required'],
     enum: [
       'Cleveland',
       'Columbus', 
@@ -85,7 +85,7 @@ const listingSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// 创建索引
+// Create indexes
 listingSchema.index({ title: 'text', description: 'text' });
 listingSchema.index({ category: 1 });
 listingSchema.index({ location: 1 });
@@ -93,7 +93,7 @@ listingSchema.index({ price: 1 });
 listingSchema.index({ createdAt: -1 });
 listingSchema.index({ 'seller.id': 1 });
 
-// 更新时自动设置 updatedAt
+// Automatically set updatedAt on update
 listingSchema.pre('save', function(next) {
   this.updatedAt = new Date();
   next();

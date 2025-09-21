@@ -82,7 +82,7 @@ SMTP_PASS=your-app-password
 
 ### Enterprise Email Configuration
 
-以腾讯企业邮箱为例：
+Using Tencent Enterprise Email as an example:
 ```env
 SMTP_HOST=smtp.exmail.qq.com
 SMTP_PORT=587
@@ -90,7 +90,7 @@ SMTP_USER=your-email@company.com
 SMTP_PASS=your-password
 ```
 
-### 第三方邮件服务
+### Third-Party Email Services
 
 #### SendGrid
 ```env
@@ -108,104 +108,104 @@ SMTP_USER=your-mailgun-username
 SMTP_PASS=your-mailgun-password
 ```
 
-## 🧪 测试邮件功能
+## 🧪 Test Email Functionality
 
-### 1. 配置测试
+### 1. Configuration Test
 
-运行邮件配置测试：
+Run email configuration test:
 ```bash
 node test-email.js
 ```
 
-### 2. 功能测试
+### 2. Functionality Test
 
-打开 `test-email-verification.html` 进行完整功能测试：
-- 用户注册测试
-- 验证邮件发送测试
-- 重新发送验证邮件测试
-- 忘记密码功能测试
+Open `test-email-verification.html` for complete functionality testing:
+- User registration test
+- Verification email sending test
+- Resend verification email test
+- Forgot password functionality test
 
-### 3. 主应用测试
+### 3. Main Application Test
 
-1. 打开 `index.html`
-2. 点击"Register"注册新用户
-3. 检查邮箱并点击验证链接
-4. 验证成功后测试平台功能
+1. Open `index.html`
+2. Click "Register" to register new user
+3. Check email and click verification link
+4. Test platform functionality after successful verification
 
 ## 📋 API 端点
 
-### 认证相关
+### Authentication Related
 
-- `POST /api/auth/register` - 用户注册（自动发送验证邮件）
-- `POST /api/auth/login` - 用户登录
-- `GET /api/auth/me` - 获取当前用户信息
-- `POST /api/auth/logout` - 用户登出
+- `POST /api/auth/register` - User registration (automatically sends verification email)
+- `POST /api/auth/login` - User login
+- `GET /api/auth/me` - Get current user information
+- `POST /api/auth/logout` - User logout
 
-### 邮箱验证相关
+### Email Verification Related
 
-- `GET /api/auth/verify-email?token=xxx` - 验证邮箱
-- `POST /api/auth/resend-verification` - 重新发送验证邮件
-- `POST /api/auth/forgot-password` - 请求密码重置
-- `POST /api/auth/reset-password` - 重置密码
+- `GET /api/auth/verify-email?token=xxx` - Verify email
+- `POST /api/auth/resend-verification` - Resend verification email
+- `POST /api/auth/forgot-password` - Request password reset
+- `POST /api/auth/reset-password` - Reset password
 
-## 🎨 邮件模板
+## 🎨 Email Templates
 
-系统包含两种精美的HTML邮件模板：
+The system includes two beautiful HTML email templates:
 
-### 1. 邮箱验证邮件
-- 渐变背景设计
-- 清晰的验证按钮
-- 详细的使用说明
-- 安全提示信息
+### 1. Email Verification Email
+- Gradient background design
+- Clear verification button
+- Detailed usage instructions
+- Security tips
 
-### 2. 密码重置邮件
-- 红色主题设计
-- 醒目的重置按钮
-- 安全警告信息
-- 过期时间提醒
+### 2. Password Reset Email
+- Red theme design
+- Prominent reset button
+- Security warning information
+- Expiration time reminder
 
-## 🔧 故障排除
+## 🔧 Troubleshooting
 
-### 常见问题
+### Common Issues
 
-1. **邮件发送失败**
-   - 检查网络连接
-   - 验证邮件服务配置
-   - 确认应用专用密码正确
+1. **Email sending failed**
+   - Check network connection
+   - Verify email service configuration
+   - Confirm app-specific password is correct
 
-2. **Gmail 连接被拒绝**
-   - 确保启用了两步验证
-   - 使用应用专用密码而非账户密码
-   - 检查"安全性较低的应用访问"设置
+2. **Gmail connection rejected**
+   - Ensure two-factor authentication is enabled
+   - Use app-specific password instead of account password
+   - Check "Less secure app access" settings
 
-3. **邮件进入垃圾箱**
-   - 添加发件人到联系人
-   - 配置SPF/DKIM记录（企业邮箱）
-   - 使用专业的邮件服务
+3. **Emails going to spam**
+   - Add sender to contacts
+   - Configure SPF/DKIM records (enterprise email)
+   - Use professional email services
 
-4. **验证链接无效**
-   - 检查链接是否过期（24小时）
-   - 确认链接完整复制
-   - 检查服务器时间设置
+4. **Verification link invalid**
+   - Check if link has expired (24 hours)
+   - Confirm link is completely copied
+   - Check server time settings
 
-### 调试模式
+### Debug Mode
 
-启用详细日志：
+Enable detailed logging:
 ```env
 NODE_ENV=development
 ```
 
-查看服务器控制台输出获取详细错误信息。
+Check server console output for detailed error information.
 
-## 📚 技术细节
+## 📚 Technical Details
 
-### 安全特性
+### Security Features
 
-- ✅ JWT Token 认证
-- ✅ 密码加密存储（bcrypt）
-- ✅ 验证链接过期机制
-- ✅ 输入验证和清理
-- ✅ 错误信息保护
+- ✅ JWT Token authentication
+- ✅ Password encrypted storage (bcrypt)
+- ✅ Verification link expiration mechanism
+- ✅ Input validation and sanitization
+- ✅ Error message protection
 
 ### 数据库字段
 
